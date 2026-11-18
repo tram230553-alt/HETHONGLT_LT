@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Default Colors: Purple (if nothing set, use purple) */
+  --theme-primary: #7C63FF;
+  --theme-secondary: #C0B3FF;
+  
+  /* Light Mode Variables */
+  --theme-bg: #F7F6FB;
+  --theme-surface: #FFFFFF;
+  --theme-surface-soft: #F8FAFC; /* slate-50 */
+  --theme-text: #1E293B; /* slate-800 */
+  --theme-text-muted: #334155; /* slate-700 / slate-600 */
+  --theme-text-light: #64748B; /* slate-500 */
+  --theme-border: #F1F5F9; /* slate-100 */
+}
+
+html[data-theme="dark"] {
+  /* Dark Mode Variables */
+  --theme-bg: #0B0F19; /* dark blueish */
+  --theme-surface: #111827; /* gray-900 */
+  --theme-surface-soft: #1F2937; /* gray-800 */
+  --theme-text: #F8FAFC; /* slate-50 */
+  --theme-text-muted: #CBD5E1; /* slate-300 */
+  --theme-text-light: #94A3B8; /* slate-400 */
+  --theme-border: #334155; /* slate-700 */
+}
+
+html[data-color="purple"] {
+  --theme-primary: #7C63FF;
+  --theme-secondary: #C0B3FF;
+}
+
+html[data-color="mint"] {
+  --theme-primary: #10B981;
+  --theme-secondary: #A7F3D0;
+}
+
+html[data-color="blue"] {
+  --theme-primary: #0F79F3;
+  --theme-secondary: #93C5FD;
+}
+
+/* Background apply so the entire page gets background automatically */
+.student-portal-root {
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --shadow-soft: 0 12px 24px rgba(124, 156, 245, 0.06);
+  --shadow-nav: 0 -4px 15px rgba(0, 0, 0, 0.02);
+  --shadow-pastel-blue: 0 10px 30px -10px rgba(124, 156, 245, 0.25);
+  --shadow-pastel-success: 0 10px 30px -10px rgba(181, 234, 215, 0.25);
+}
+
+/* Hiệu ứng Glassmorphism */
+.glass-panel {
+  background: var(--theme-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--theme-border);
+}
+
+.glass-card {
+  background: var(--theme-surface);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--theme-border);
+}
+
+/* Custom scrollbar ẩn cho trải nghiệm mobile mượt mà */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Animations cho lật Flashcard */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Desktop workspace scrollbar: visible but unobtrusive. */
+@media (min-width: 768px) {
+  .desktop-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .desktop-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--theme-text-light) 28%, transparent);
+    border-radius: 999px;
+  }
+}
+
+
+/* Student portal: keep horizontal carousels clean, but show vertical scrollbars on desktop. */
+@media (min-width: 768px) {
+  .student-portal-root .no-scrollbar.overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--theme-text-light) 35%, transparent) transparent;
+  }
+
+  .student-portal-root .no-scrollbar.overflow-y-auto::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+
+  .student-portal-root .no-scrollbar.overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .student-portal-root .no-scrollbar.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--theme-text-light) 32%, transparent);
+    border-radius: 999px;
+  }
+}

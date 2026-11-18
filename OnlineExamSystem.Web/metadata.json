@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Online Exam Admin Dashboard",
+  "description": "A comprehensive administrative dashboard for managing subjects, questions, exams, teachers, and student performance for an online exam preparation platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

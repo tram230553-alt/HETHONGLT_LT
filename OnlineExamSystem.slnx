@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="OnlineExamSystem.API/OnlineExamSystem.API.csproj" Id="c4a12842-92f4-4c35-8aa9-7f9355a68dca" />
+  <Project Path="OnlineExamSystem.Application/OnlineExamSystem.Application.csproj" Id="80d324c3-c145-4d28-be86-11b333e256a8" />
+  <Project Path="OnlineExamSystem.Domain/OnlineExamSystem.Domain.csproj" Id="61148192-956f-43e8-b16a-f5fc8b51af96" />
+  <Project Path="OnlineExamSystem.Infrastructure/OnlineExamSystem.Infrastructure.csproj" Id="774cc87c-f1b4-41aa-85b7-b0b56e7ef215" />
+  <Project Path="OnlineExamSystem.Web/Onlineexamsystem.Web.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+</Solution>
