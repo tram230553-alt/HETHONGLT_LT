@@ -1,0 +1,35 @@
+
+# Giai đoạn 1: Build ứng dụng
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
+WORKDIR /src
+
+# Copy các file project
+COPY ["OnlineExamSystem.API/OnlineExamSystem.API.csproj", "OnlineExamSystem.API/"]
+COPY ["OnlineExamSystem.Application/OnlineExamSystem.Application.csproj", "OnlineExamSystem.Application/"]
+COPY ["OnlineExamSystem.Infrastructure/OnlineExamSystem.Infrastructure.csproj", "OnlineExamSystem.Infrastructure/"]
+COPY ["OnlineExamSystem.Domain/OnlineExamSystem.Domain.csproj", "OnlineExamSystem.Domain/"]
+
+# Restore các thư viện
+RUN dotnet restore "OnlineExamSystem.API/OnlineExamSystem.API.csproj"
+
+# Copy source code
+COPY . .
+
+# Build và publish
+WORKDIR /src/OnlineExamSystem.API
+RUN dotnet publish "OnlineExamSystem.API.csproj" -c Release -o /app/publish --no-restore
+
+# Giai đoạn 2: Chạy ứng dụng
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+
+WORKDIR /app
+
+# Cổng HTTP mà Render sử dụng
+ENV ASPNETCORE_HTTP_PORTS=8080
+
+EXPOSE 8080
+
+COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "OnlineExamSystem.API.dll"]
