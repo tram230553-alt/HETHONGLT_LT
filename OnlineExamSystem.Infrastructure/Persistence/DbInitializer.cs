@@ -12,6 +12,13 @@ namespace OnlineExamSystem.Infrastructure.Persistence
         public static async Task SeedAdminAsync(
             ApplicationDbContext context)
         {
+            await context.Database.ExecuteSqlRawAsync(@"
+                IF COL_LENGTH('Students', 'NgaySinh') IS NULL
+                BEGIN
+                    ALTER TABLE [Students] ADD [NgaySinh] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+                END
+            ");
+
             var systemSettingExists =
                 await context.SystemSettings
                     .AnyAsync(x => x.Id == 1);
