@@ -19,6 +19,61 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+// Cấu hình CORS cho phép Frontend trên Vercel và Local gọi Backend trên Render
+var allowedOriginsConfig = builder.Configuration["Cors:AllowedOrigins"]
+    ?? builder.Configuration["AllowedOrigins"]
+    ?? builder.Configuration["Frontend:Urls"]
+    ?? builder.Configuration["FRONTEND_URL"];
+
+var configuredOrigins = string.IsNullOrWhiteSpace(allowedOriginsConfig)
+    ? Array.Empty<string>()
+    : allowedOriginsConfig
+        .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(o => o.TrimEnd('/'))
+        .ToArray();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrWhiteSpace(origin))
+                {
+                    return false;
+                }
+
+                var normalizedOrigin = origin.TrimEnd('/');
+
+                if (configuredOrigins.Length == 0 || configuredOrigins.Contains("*"))
+                {
+                    return true;
+                }
+
+                if (configuredOrigins.Contains(normalizedOrigin, StringComparer.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (Uri.TryCreate(normalizedOrigin, UriKind.Absolute, out var uri))
+                {
+                    if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                        uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                        uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            })
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+});
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetService<ApplicationDbContext>());
@@ -123,8 +178,12 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+app.UseCors("AllowFrontend");
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 

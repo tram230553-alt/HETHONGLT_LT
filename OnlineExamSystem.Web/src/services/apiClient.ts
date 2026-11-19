@@ -1,3 +1,4 @@
+import { apiUrl } from "../api";
 export async function apiRequest<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -30,7 +31,7 @@ export async function apiRequest<T>(
     }
 
     const response = await fetch(
-        endpoint,
+        apiUrl(endpoint),
         {
             ...options,
             headers,

@@ -1,3 +1,4 @@
+import { apiUrl } from "../api";
 import { jwtDecode } from "jwt-decode";
 
 export type AppRole =
@@ -90,7 +91,7 @@ export async function login(
     request: LoginRequest,
 ): Promise<LoginResult> {
     const response = await fetch(
-        "/api/auth/login",
+        apiUrl("/api/auth/login"),
         {
             method: "POST",
             headers: {
@@ -197,7 +198,7 @@ export async function registerStudent(
     request: RegisterStudentRequest,
 ): Promise<string> {
     const response = await fetch(
-        "/api/auth/register",
+        apiUrl("/api/auth/register"),
         {
             method: "POST",
             headers: {
@@ -273,7 +274,7 @@ async function postAuthMessage(
     fallbackError: string,
 ): Promise<string> {
     const response = await fetch(
-        endpoint,
+        apiUrl(endpoint),
         {
             method: "POST",
             headers: {

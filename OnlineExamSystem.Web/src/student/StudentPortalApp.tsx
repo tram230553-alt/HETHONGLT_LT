@@ -3,6 +3,7 @@
 * SPDX-License-Identifier: Apache-2.0
 */
 import TopicPracticeView from "./components/TopicPracticeView";
+import { apiUrl } from "../api";
 
 import type {
     TopicDto,
@@ -215,7 +216,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     const syncHistoryOnStartup = async () => {
       if (historyLogs && historyLogs.length > 0) {
         try {
-          await fetch("/api/student/exams/history/sync", {
+          await fetch(apiUrl("/api/student/exams/history/sync"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ historyItems: historyLogs })
@@ -255,7 +256,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     if (!skipServerSync) {
       // Bảo mật & Đồng bộ: Gửi bản ghi thi cử trực tiếp lên Server ngay lập tức để có thể Xem lại chuẩn
       try {
-        await fetch("/api/student/exams/history", {
+        await fetch(apiUrl("/api/student/exams/history"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ historyItem: item })
