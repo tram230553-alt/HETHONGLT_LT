@@ -4,6 +4,7 @@
 */
 import TopicPracticeView from "./components/TopicPracticeView";
 import WordPuzzleGameView from "./components/WordPuzzleGameView";
+import GamePracticeTab from "./components/GamePracticeTab";
 import { apiUrl } from "../api";
 
 import type {
@@ -23,6 +24,7 @@ import {
   Sparkles,
   Flame,
   GraduationCap,
+  Gamepad2,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -91,7 +93,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
 
   const handleNavigateToExam = (subjectId: SubjectId, examId: string) => {
     setNavTargetExam({ subjectId, examId });
-    setActiveTab(2); // Chuyển sang Luyện đề
+    setActiveTab(3); // Chuyển sang Luyện đề
   };
 
   // 2. KHỞI TẠO STATE NGƯỜI DÙNG & LỊCH SỬ THI (Local Persistence via LocalStorage)
@@ -356,12 +358,32 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
             onSwitchTab={setActiveTab}
             onSelectSubjectForPractice={(subId) => {
               setPracticeSubject(subId);
-              setActiveTab(2);
+              setActiveTab(3);
             }}
             onNavigateToExam={handleNavigateToExam}
           />
         );
         case 1:
+            if (selectedTopic) {
+                return (
+                    <TopicPracticeView
+                        topic={selectedTopic}
+                        onBack={() => {
+                            setSelectedTopic(null);
+                        }}
+                    />
+                );
+            }
+
+            return (
+                <TopicTab
+                    onSelectTopic={(topic) => {
+                        setSelectedTopic(topic);
+                    }}
+                />
+            );
+        case 2:
+            // MỤC LUYỆN TẬP RIÊNG (CHIA THEO MÔN HỌC -> CÁC GAME ÔN TẬP)
             if (selectedWordGameTopic) {
                 return (
                     <WordPuzzleGameView
@@ -374,33 +396,14 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                 );
             }
 
-            if (selectedTopic) {
-                return (
-                    <TopicPracticeView
-                        topic={selectedTopic}
-                        onBack={() => {
-                            setSelectedTopic(null);
-                        }}
-                        onStartWordGame={() => {
-                            const topicToPlay = selectedTopic;
-                            setSelectedTopic(null);
-                            setSelectedWordGameTopic(topicToPlay);
-                        }}
-                    />
-                );
-            }
-
             return (
-                <TopicTab
-                    onSelectTopic={(topic) => {
-                        setSelectedTopic(topic);
-                    }}
-                    onSelectWordGameTopic={(topic) => {
+                <GamePracticeTab
+                    onSelectWordGame={(topic) => {
                         setSelectedWordGameTopic(topic);
                     }}
                 />
             );
-      case 2:
+      case 3:
         return (
           <PracticeTab
             onEarnGems={handleEarnGems}
@@ -414,7 +417,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
             }}
           />
         );
-      case 3:
+      case 4:
         return (
           <ResultsTab
             stats={stats}
@@ -424,7 +427,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
             onAddHistory={handleAddHistoryLog}
           />
         );
-        case 4:
+        case 5:
             return (
                 <ProfileTab
                     profile={studentProfile}
@@ -448,6 +451,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     const currentTabTitle = [
         "Trang chủ",
         "Chủ đề học",
+        "Game Luyện tập",
         "Luyện đề",
         "Kết quả",
         "Cá nhân"
@@ -456,6 +460,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     const navigationItems = [
         { label: "Trang chủ", icon: Home },
         { label: "Chủ đề học", icon: BookOpenCheck },
+        { label: "Game Luyện tập", icon: Gamepad2 },
         { label: "Luyện đề", icon: BookOpenCheck },
         { label: "Kết quả", icon: TrendingUp },
         { label: "Cá nhân", icon: User },
@@ -640,7 +645,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
           </main>
 
           {/* Bottom navigation only on small screens */}
-          <div className="md:hidden h-[66px] bg-[var(--theme-surface)] border-t border-[var(--theme-border)] grid grid-cols-5 z-40 shrink-0 shadow-nav">
+          <div className="md:hidden h-[66px] bg-[var(--theme-surface)] border-t border-[var(--theme-border)] grid grid-cols-6 z-40 shrink-0 shadow-nav">
             {navigationItems.map((tab, idx) => {
               const Icon = tab.icon;
               const isActive = activeTab === idx;
@@ -648,11 +653,11 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                 <button
                   key={tab.label}
                   onClick={() => setActiveTab(idx)}
-                  className="flex flex-col items-center justify-center gap-1 transition active:scale-95"
+                  className="flex flex-col items-center justify-center gap-1 transition active:scale-95 px-0.5"
                 >
                   <Icon className={`w-5 h-5 ${isActive ? "text-[var(--theme-primary)] stroke-[2.5]" : "text-slate-400"}`} />
-                  <span className={`text-[9px] font-bold ${isActive ? "text-[var(--theme-primary)]" : "text-slate-400"}`}>
-                    {tab.label.replace(" học", "")}
+                  <span className={`text-[8.5px] font-bold truncate max-w-[50px] ${isActive ? "text-[var(--theme-primary)]" : "text-slate-400"}`}>
+                    {tab.label.replace(" học", "").replace(" Luyện tập", "")}
                   </span>
                 </button>
               );
