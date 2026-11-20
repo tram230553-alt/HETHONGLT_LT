@@ -22,6 +22,22 @@ export interface PracticeQuestionDto {
 }
 
 /* =========================================================
+   WORD PUZZLE (ALPHABETTY SAGA)
+========================================================= */
+
+export interface WordPuzzleQuestionDto {
+    id: string;
+    questionText: string;
+    wordAnswer: string;
+    displayAnswer: string;
+    explanation?: string | null;
+    type: string;
+    topicId: string;
+    topicName: string;
+    subjectName: string;
+}
+
+/* =========================================================
    SUBMIT ANSWER
 ========================================================= */
 
@@ -162,6 +178,21 @@ export async function getPracticeQuestions(
 }
 
 /* =========================================================
+   GET WORD PUZZLE QUESTIONS (ALPHABETTY SAGA)
+========================================================= */
+
+export async function getWordPuzzleQuestions(
+    topicId: string,
+): Promise<WordPuzzleQuestionDto[]> {
+    return await apiRequest<WordPuzzleQuestionDto[]>(
+        `/api/students/topics/${topicId}/word-puzzle-questions`,
+        {
+            method: "GET",
+        },
+    );
+}
+
+/* =========================================================
    SUBMIT
 ========================================================= */
 
@@ -214,6 +245,7 @@ export async function getPracticeAttemptDetail(
 
 export const practiceService = {
     getPracticeQuestions,
+    getWordPuzzleQuestions,
     submitPractice,
     getPracticeAttempts,
     getPracticeAttemptDetail,

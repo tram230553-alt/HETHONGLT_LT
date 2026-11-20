@@ -26,11 +26,13 @@ import PracticeResultView from "./PracticeResultView";
 interface TopicPracticeViewProps {
     topic: TopicDto;
     onBack: () => void;
+    onStartWordGame?: () => void;
 }
 
 export default function TopicPracticeView({
     topic,
     onBack,
+    onStartWordGame,
 }: TopicPracticeViewProps) {
     const [questions, setQuestions] =
         React.useState<PracticeQuestionDto[]>([]);
@@ -216,6 +218,7 @@ export default function TopicPracticeView({
                     attemptId={completedAttemptId}
                     onBack={onBack}
                     onRetry={handleRetry}
+                    onStartWordGame={onStartWordGame}
                 />
             </div>
         );

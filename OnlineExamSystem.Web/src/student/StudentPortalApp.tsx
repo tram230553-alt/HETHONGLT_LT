@@ -3,6 +3,7 @@
 * SPDX-License-Identifier: Apache-2.0
 */
 import TopicPracticeView from "./components/TopicPracticeView";
+import WordPuzzleGameView from "./components/WordPuzzleGameView";
 import { apiUrl } from "../api";
 
 import type {
@@ -72,6 +73,12 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     const [
         selectedTopic,
         setSelectedTopic,
+    ] = React.useState<TopicDto | null>(
+        null,
+    );
+    const [
+        selectedWordGameTopic,
+        setSelectedWordGameTopic,
     ] = React.useState<TopicDto | null>(
         null,
     );
@@ -355,17 +362,29 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
           />
         );
         case 1:
+            if (selectedWordGameTopic) {
+                return (
+                    <WordPuzzleGameView
+                        topic={selectedWordGameTopic}
+                        onBack={() => {
+                            setSelectedWordGameTopic(null);
+                        }}
+                        onEarnGems={handleEarnGems}
+                    />
+                );
+            }
 
             if (selectedTopic) {
-
                 return (
                     <TopicPracticeView
                         topic={selectedTopic}
-
                         onBack={() => {
-                            setSelectedTopic(
-                                null,
-                            );
+                            setSelectedTopic(null);
+                        }}
+                        onStartWordGame={() => {
+                            const topicToPlay = selectedTopic;
+                            setSelectedTopic(null);
+                            setSelectedWordGameTopic(topicToPlay);
                         }}
                     />
                 );
@@ -374,9 +393,10 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
             return (
                 <TopicTab
                     onSelectTopic={(topic) => {
-                        setSelectedTopic(
-                            topic,
-                        );
+                        setSelectedTopic(topic);
+                    }}
+                    onSelectWordGameTopic={(topic) => {
+                        setSelectedWordGameTopic(topic);
                     }}
                 />
             );

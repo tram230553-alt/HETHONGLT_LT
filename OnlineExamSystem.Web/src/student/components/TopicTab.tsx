@@ -8,12 +8,14 @@ import {
     ChevronRight,
     CircleAlert,
     FlaskConical,
+    Gamepad2,
     GraduationCap,
     Landmark,
     Medal,
     RefreshCw,
     Search,
     Sigma,
+    Sparkles,
 } from "lucide-react";
 
 import {
@@ -31,6 +33,7 @@ import {
 
 interface TopicTabProps {
     onSelectTopic?: (topic: TopicDto) => void;
+    onSelectWordGameTopic?: (topic: TopicDto) => void;
 }
 
 /* =========================================================
@@ -197,6 +200,7 @@ const getSubjectTheme = (
 
 export default function TopicTab({
     onSelectTopic,
+    onSelectWordGameTopic,
 }: TopicTabProps) {
     /* =====================================================
        DATA
@@ -1372,12 +1376,29 @@ export default function TopicTab({
                                                                         }
                                                                     </h3>
 
-                                                                    <p className="mt-1 text-sm font-medium text-slate-600">
-                                                                        {
-                                                                            topic.questionCount
-                                                                        }{" "}
-                                                                        câu hỏi luyện tập
-                                                                    </p>
+                                                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                                        <span className="text-sm font-medium text-slate-600">
+                                                                            {
+                                                                                topic.questionCount
+                                                                            }{" "}
+                                                                            câu hỏi luyện tập
+                                                                        </span>
+
+                                                                        {onSelectWordGameTopic && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    onSelectWordGameTopic(topic);
+                                                                                }}
+                                                                                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-1 text-xs font-black text-slate-950 shadow-sm transition hover:scale-105 hover:from-amber-400 hover:to-yellow-400 active:scale-95"
+                                                                                title="Chơi Game Nối Chữ (AlphaBetty Saga) ôn tập câu hỏi tự luận chủ đề này"
+                                                                            >
+                                                                                <Gamepad2 className="h-3.5 w-3.5 text-slate-950" />
+                                                                                Game Nối Chữ
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
 
                                                                 <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-300 transition group-hover:bg-orange-50 group-hover:text-orange-400 sm:flex">

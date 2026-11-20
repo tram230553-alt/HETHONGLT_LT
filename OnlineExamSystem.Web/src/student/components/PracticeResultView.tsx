@@ -6,6 +6,7 @@ import {
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
+    Gamepad2,
     Loader2,
     Sparkles,
     RotateCcw,
@@ -22,12 +23,14 @@ interface PracticeResultViewProps {
     attemptId: string;
     onBack: () => void;
     onRetry?: () => void;
+    onStartWordGame?: () => void;
 }
 
 export default function PracticeResultView({
     attemptId,
     onBack,
     onRetry,
+    onStartWordGame,
 }: PracticeResultViewProps) {
     const [detail, setDetail] =
         React.useState<PracticeAttemptDetailDto | null>(null);
@@ -284,20 +287,59 @@ export default function PracticeResultView({
                         </div>
                     </div>
 
-                    {onRetry && (
-                        <button
-                            type="button"
-                            onClick={onRetry}
-                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-blue-700"
-                        >
-                            <RotateCcw className="h-4 w-4" />
-                            Làm lại
-                        </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {onStartWordGame && (
+                            <button
+                                type="button"
+                                onClick={onStartWordGame}
+                                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:from-amber-400 hover:to-yellow-400 shadow-md active:scale-95"
+                            >
+                                <Gamepad2 className="h-4 w-4" />
+                                Game Nối Chữ
+                            </button>
+                        )}
+
+                        {onRetry && (
+                            <button
+                                type="button"
+                                onClick={onRetry}
+                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-blue-700"
+                            >
+                                <RotateCcw className="h-4 w-4" />
+                                Làm lại
+                            </button>
+                        )}
+                    </div>
                 </div>
             </header>
 
             <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-6">
+                {/* BANNER GỢI Ý CHƠI GAME NỐI CHỮ SAU KHI HỌC XONG */}
+                {onStartWordGame && (
+                    <div className="mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-3xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/15 border-2 border-amber-400/40 p-4 md:p-5 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-slate-950 shadow-md">
+                                <Gamepad2 className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm md:text-base font-black text-slate-900">
+                                    Củng cố kiến thức với Minigame Nối Chữ AlphaBetty!
+                                </h3>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                    Ôn lại kiến thức chủ đề qua các câu hỏi tự luận với thử thách ghép từ hấp dẫn.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onStartWordGame}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:scale-105 active:scale-95 shadow-md shrink-0"
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            Chơi ngay
+                        </button>
+                    </div>
+                )}
                 <section className="mb-5 overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg">
                     <div className="grid gap-5 p-5 md:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
                         <div className="flex items-center gap-4">
