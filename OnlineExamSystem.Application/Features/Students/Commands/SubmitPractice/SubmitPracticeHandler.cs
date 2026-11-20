@@ -94,17 +94,29 @@ namespace OnlineExamSystem.Application.Features.Students.Commands.SubmitPractice
 
             // Một QuestionId chỉ có một đáp án cuối cùng.
             // Các QuestionId không thuộc Topic sẽ bị bỏ qua.
-            if (request.Answers.Any(x => !QuestionAnswerHelper.IsValidSubmittedAnswer(x.Answer)))
+            var questionDict = questions.ToDictionary(q => q.Id);
+            foreach (var item in request.Answers)
             {
-                throw new InvalidOperationException(
-                    "Đáp án chỉ được gồm các giá trị A, B, C, D và không được lặp.");
+                if (questionDict.TryGetValue(item.QuestionId, out var q))
+                {
+                    if (!QuestionAnswerHelper.IsValidSubmittedAnswer(q.Type, item.Answer))
+                    {
+                        var nType = QuestionAnswerHelper.NormalizeType(q.Type);
+                        throw new InvalidOperationException(
+                            nType == "true_false"
+                                ? "Đáp án Đúng/Sai chỉ nhận Đúng (T) hoặc Sai (F)."
+                                : nType == "essay"
+                                    ? "Đáp án tự luận không hợp lệ."
+                                    : "Đáp án chỉ được gồm các giá trị A, B, C, D và không được lặp.");
+                    }
+                }
             }
 
             var answerMap = request.Answers
                 .GroupBy(x => x.QuestionId)
                 .ToDictionary(
                     x => x.Key,
-                    x => QuestionAnswerHelper.NormalizeAnswerSet(x.Last().Answer));
+                    x => x.Last().Answer);
 
             var attemptId = Guid.NewGuid();
             var resultItems = new List<QuestionAnswerResultDto>();
@@ -116,29 +128,35 @@ namespace OnlineExamSystem.Application.Features.Students.Commands.SubmitPractice
             for (var index = 0; index < questions.Count; index++)
             {
                 var question = questions[index];
+                var normalizedType = QuestionAnswerHelper.NormalizeType(question.Type);
 
                 answerMap.TryGetValue(
                     question.Id,
-                    out var userAnswer);
+                    out var rawUserAnswer);
 
-                userAnswer = QuestionAnswerHelper.NormalizeAnswerSet(userAnswer);
-
-                var correctAnswer = QuestionAnswerHelper.NormalizeAnswerSet(
-                    question.CorrectAnswer);
-
-                if (QuestionAnswerHelper.NormalizeType(question.Type) == "single_choice" &&
-                    userAnswer.Contains(','))
+                string? userAnswer = null;
+                if (!string.IsNullOrWhiteSpace(rawUserAnswer))
                 {
-                    throw new InvalidOperationException(
-                        "Câu hỏi một đáp án chỉ được chọn một phương án.");
+                    if (normalizedType == "true_false")
+                    {
+                        userAnswer = QuestionAnswerHelper.NormalizeTrueFalseAnswer(rawUserAnswer);
+                    }
+                    else if (normalizedType == "essay")
+                    {
+                        userAnswer = QuestionAnswerHelper.NormalizeEssayText(rawUserAnswer);
+                    }
+                    else
+                    {
+                        userAnswer = QuestionAnswerHelper.NormalizeAnswerSet(rawUserAnswer);
+                        if (normalizedType == "single_choice" && userAnswer.Contains(','))
+                        {
+                            throw new InvalidOperationException("Câu hỏi một đáp án chỉ được chọn một phương án.");
+                        }
+                    }
                 }
 
-                var answered = !string.IsNullOrWhiteSpace(
-                    userAnswer);
-
-                var isCorrect =
-                    answered &&
-                    userAnswer == correctAnswer;
+                var answered = !string.IsNullOrWhiteSpace(userAnswer);
+                var isCorrect = answered && QuestionAnswerHelper.CompareAnswers(question.Type, userAnswer, question.CorrectAnswer);
 
                 if (answered)
                 {
@@ -165,7 +183,7 @@ namespace OnlineExamSystem.Application.Features.Students.Commands.SubmitPractice
                         StudentAnswer = answered
                             ? userAnswer
                             : null,
-                        CorrectAnswer = correctAnswer,
+                        CorrectAnswer = question.CorrectAnswer,
                         IsCorrect = isCorrect,
                         Explanation = question.Explanation
                     });
@@ -174,8 +192,8 @@ namespace OnlineExamSystem.Application.Features.Students.Commands.SubmitPractice
                     new QuestionAnswerResultDto
                     {
                         QuestionId = question.Id,
-                        UserAnswer = userAnswer,
-                        CorrectAnswer = correctAnswer,
+                        UserAnswer = userAnswer ?? string.Empty,
+                        CorrectAnswer = question.CorrectAnswer,
                         IsCorrect = isCorrect,
                         Explanation = question.Explanation
                     });

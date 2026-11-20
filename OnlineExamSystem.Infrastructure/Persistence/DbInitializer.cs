@@ -1,4 +1,4 @@
-﻿using OnlineExamSystem.Domain.Entities;
+using OnlineExamSystem.Domain.Entities;
 using OnlineExamSystem.Infrastructure.Persistence.DbContext;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -16,6 +16,22 @@ namespace OnlineExamSystem.Infrastructure.Persistence
                 IF COL_LENGTH('Students', 'NgaySinh') IS NULL
                 BEGIN
                     ALTER TABLE [Students] ADD [NgaySinh] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+                END
+
+                -- Đảm bảo cột đáp án lưu được tự luận và đúng/sai
+                IF (SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'StudentAnswers' AND COLUMN_NAME = 'SelectedAnswer') < 4000
+                BEGIN
+                    ALTER TABLE [StudentAnswers] ALTER COLUMN [SelectedAnswer] NVARCHAR(MAX);
+                END
+
+                IF (SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'PracticeAnswers' AND COLUMN_NAME = 'StudentAnswer') < 4000
+                BEGIN
+                    ALTER TABLE [PracticeAnswers] ALTER COLUMN [StudentAnswer] NVARCHAR(MAX);
+                END
+
+                IF (SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'PracticeAnswers' AND COLUMN_NAME = 'CorrectAnswer') < 4000
+                BEGIN
+                    ALTER TABLE [PracticeAnswers] ALTER COLUMN [CorrectAnswer] NVARCHAR(MAX);
                 END
             ");
 

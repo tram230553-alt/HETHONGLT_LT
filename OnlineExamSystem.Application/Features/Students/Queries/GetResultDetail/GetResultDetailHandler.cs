@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using OnlineExamSystem.Application.Common;
 using OnlineExamSystem.Application.Common.Interfaces;
 using OnlineExamSystem.Application.DTOs.Students;
 
@@ -72,8 +73,9 @@ public class GetResultDetailHandler
                 OptionB = answer.Question.OptionB,
                 OptionC = answer.Question.OptionC,
                 OptionD = answer.Question.OptionD,
-                SelectedAnswer = NormalizeAnswer(answer.SelectedAnswer),
-                CorrectAnswer = NormalizeAnswer(answer.Question.CorrectAnswer),
+                SelectedAnswer = NormalizeAnswer(answer.SelectedAnswer, answer.Question.Type),
+                CorrectAnswer = NormalizeAnswer(answer.Question.CorrectAnswer, answer.Question.Type),
+                Type = answer.Question.Type,
                 IsCorrect = answer.IsCorrect
             })
             .ToList();
@@ -90,8 +92,12 @@ public class GetResultDetailHandler
         };
     }
 
-    private static string NormalizeAnswer(string? value)
+    private static string NormalizeAnswer(string? value, string? type)
     {
-        return value?.Trim().ToUpperInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var normType = QuestionAnswerHelper.NormalizeType(type);
+        if (normType == "essay") return value.Trim();
+        if (normType == "true_false") return QuestionAnswerHelper.NormalizeTrueFalseAnswer(value);
+        return value.Trim().ToUpperInvariant();
     }
 }

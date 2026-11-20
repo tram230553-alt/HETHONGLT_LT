@@ -505,59 +505,118 @@ export default function PracticeTab({
               <p className="text-[11px] font-bold text-[var(--theme-text-light)]">
                 {activeQuestion.type === "multiple_choice"
                   ? "Chọn tất cả đáp án đúng. Chọn thiếu hoặc thừa đều không được tính điểm."
-                  : "Chọn một đáp án đúng."}
+                  : activeQuestion.type === "true_false"
+                    ? "Chọn Đúng hoặc Sai cho mệnh đề này."
+                    : activeQuestion.type === "essay"
+                      ? "Nhập câu trả lời/từ khóa hoặc nội dung tự luận vào ô bên dưới."
+                      : "Chọn một đáp án đúng."}
               </p>
             </div>
 
             <div className="space-y-2 pt-2">
-              {[
-                activeQuestion.optionA,
-                activeQuestion.optionB,
-                activeQuestion.optionC,
-                activeQuestion.optionD,
-              ].map((option, index) => {
-                const letter = answerLetters[index];
-                const selected = (selectedAnswers[activeQuestion.id] ?? "")
-                  .split(",")
-                  .includes(letter);
-                return (
-                  <button
-                    key={letter}
-                    type="button"
-                    onClick={() => setSelectedAnswers((previous) => {
-                      if (activeQuestion.type !== "multiple_choice") {
-                        return { ...previous, [activeQuestion.id]: letter };
-                      }
-
-                      const selectedSet = new Set(
-                        (previous[activeQuestion.id] ?? "").split(",").filter(Boolean),
-                      );
-                      if (selectedSet.has(letter)) selectedSet.delete(letter);
-                      else selectedSet.add(letter);
-
-                      const value = answerLetters.filter((item) => selectedSet.has(item)).join(",");
-                      const next = { ...previous };
-                      if (value) next[activeQuestion.id] = value;
-                      else delete next[activeQuestion.id];
-                      return next;
-                    })}
-                    className={`w-full text-left p-3.5 rounded-2xl border text-xs font-semibold transition-all duration-300 flex items-center gap-3 ${
-                      selected
-                        ? "bg-[#EBF2FF] border-[var(--theme-primary)] text-[var(--theme-primary)] shadow-sm"
-                        : "bg-[var(--theme-surface)] border-[#E9EDF7] text-[#2D3748] hover:bg-[var(--theme-surface-soft)]"
-                    }`}
-                  >
-                    <div className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center border shrink-0 ${
-                      selected
-                        ? "bg-[var(--theme-primary)] text-white border-transparent"
-                        : "bg-[var(--theme-surface-soft)] text-[var(--theme-text-light)] border-[var(--theme-border)]"
-                    }`}>
-                      {letter}
+              {activeQuestion.type === "true_false" ? (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  {[
+                    { label: "ĐÚNG", val: "T", color: "emerald" },
+                    { label: "SAI", val: "F", color: "rose" }
+                  ].map((item) => {
+                    const selected = (selectedAnswers[activeQuestion.id] ?? "").toUpperCase() === item.val;
+                    return (
+                      <button
+                        key={item.val}
+                        type="button"
+                        onClick={() => setSelectedAnswers((prev) => ({ ...prev, [activeQuestion.id]: item.val }))}
+                        className={`w-full py-4 px-5 rounded-2xl border text-sm font-bold transition flex items-center justify-center gap-2 ${
+                          selected
+                            ? "bg-[#EBF2FF] border-[var(--theme-primary)] text-[var(--theme-primary)] shadow-sm ring-2 ring-[var(--theme-primary)]/20"
+                            : "bg-[var(--theme-surface)] border-[#E9EDF7] text-[#2D3748] hover:bg-[var(--theme-surface-soft)]"
+                        }`}
+                      >
+                        <span className="text-base">{item.val === "T" ? "✓" : "✗"}</span>
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : activeQuestion.type === "essay" ? (
+                <div className="space-y-3 pt-1">
+                  {[activeQuestion.optionA, activeQuestion.optionB, activeQuestion.optionC, activeQuestion.optionD].some(Boolean) && (
+                    <div className="bg-[var(--theme-surface-soft)] p-3 rounded-2xl border border-[var(--theme-border)] space-y-1">
+                      <p className="text-xs font-bold text-slate-500">Các ý tham khảo/gợi ý:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {activeQuestion.optionA && <div className="p-2 bg-[var(--theme-surface)] rounded-xl border border-[var(--theme-border)]"><strong>a)</strong> {activeQuestion.optionA}</div>}
+                        {activeQuestion.optionB && <div className="p-2 bg-[var(--theme-surface)] rounded-xl border border-[var(--theme-border)]"><strong>b)</strong> {activeQuestion.optionB}</div>}
+                        {activeQuestion.optionC && <div className="p-2 bg-[var(--theme-surface)] rounded-xl border border-[var(--theme-border)]"><strong>c)</strong> {activeQuestion.optionC}</div>}
+                        {activeQuestion.optionD && <div className="p-2 bg-[var(--theme-surface)] rounded-xl border border-[var(--theme-border)]"><strong>d)</strong> {activeQuestion.optionD}</div>}
+                      </div>
                     </div>
-                    <span className="flex-1 font-sans">{option}</span>
-                  </button>
-                );
-              })}
+                  )}
+                  <textarea
+                    rows={4}
+                    value={selectedAnswers[activeQuestion.id] ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedAnswers((prev) => {
+                        const next = { ...prev };
+                        if (val.trim()) next[activeQuestion.id] = val;
+                        else delete next[activeQuestion.id];
+                        return next;
+                      });
+                    }}
+                    placeholder="Nhập câu trả lời hoặc lời giải tự luận của bạn vào đây..."
+                    className="w-full rounded-2xl border border-[#E9EDF7] bg-[var(--theme-surface)] p-4 text-sm font-sans outline-none focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/10"
+                  />
+                </div>
+              ) : (
+                [
+                  activeQuestion.optionA,
+                  activeQuestion.optionB,
+                  activeQuestion.optionC,
+                  activeQuestion.optionD,
+                ].map((option, index) => {
+                  const letter = answerLetters[index];
+                  const selected = (selectedAnswers[activeQuestion.id] ?? "")
+                    .split(",")
+                    .includes(letter);
+                  return (
+                    <button
+                      key={letter}
+                      type="button"
+                      onClick={() => setSelectedAnswers((previous) => {
+                        if (activeQuestion.type !== "multiple_choice") {
+                          return { ...previous, [activeQuestion.id]: letter };
+                        }
+
+                        const selectedSet = new Set(
+                          (previous[activeQuestion.id] ?? "").split(",").filter(Boolean),
+                        );
+                        if (selectedSet.has(letter)) selectedSet.delete(letter);
+                        else selectedSet.add(letter);
+
+                        const value = answerLetters.filter((item) => selectedSet.has(item)).join(",");
+                        const next = { ...previous };
+                        if (value) next[activeQuestion.id] = value;
+                        else delete next[activeQuestion.id];
+                        return next;
+                      })}
+                      className={`w-full text-left p-3.5 rounded-2xl border text-xs font-semibold transition-all duration-300 flex items-center gap-3 ${
+                        selected
+                          ? "bg-[#EBF2FF] border-[var(--theme-primary)] text-[var(--theme-primary)] shadow-sm"
+                          : "bg-[var(--theme-surface)] border-[#E9EDF7] text-[#2D3748] hover:bg-[var(--theme-surface-soft)]"
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center border shrink-0 ${
+                        selected
+                          ? "bg-[var(--theme-primary)] text-white border-transparent"
+                          : "bg-[var(--theme-surface-soft)] text-[var(--theme-text-light)] border-[var(--theme-border)]"
+                      }`}>
+                        {letter}
+                      </div>
+                      <span className="flex-1 font-sans">{option}</span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </>
         )}

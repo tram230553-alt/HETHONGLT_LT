@@ -18,5 +18,7 @@ public class ResultQuestionDetailDto
 
     public string CorrectAnswer { get; set; } = string.Empty;
 
+    public string Type { get; set; } = "single_choice";
+
     public bool IsCorrect { get; set; }
 }

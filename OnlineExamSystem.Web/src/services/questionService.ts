@@ -15,7 +15,7 @@ export interface QuestionDto {
     optionD: string;
 
     correctAnswer: string;
-    type: "single_choice" | "multiple_choice";
+    type: "single_choice" | "multiple_choice" | "true_false" | "essay";
     difficulty: "easy" | "medium" | "hard";
 
     subjectId: string;
@@ -53,7 +53,7 @@ export interface CreateQuestionRequest {
     optionD: string;
 
     correctAnswer: string;
-    type: "single_choice" | "multiple_choice";
+    type: "single_choice" | "multiple_choice" | "true_false" | "essay";
     difficulty: "easy" | "medium" | "hard";
 
     topicId: string;
@@ -75,7 +75,7 @@ export interface UpdateQuestionRequest {
     optionD: string;
 
     correctAnswer: string;
-    type: "single_choice" | "multiple_choice";
+    type: "single_choice" | "multiple_choice" | "true_false" | "essay";
     difficulty: "easy" | "medium" | "hard";
 
     topicId: string;

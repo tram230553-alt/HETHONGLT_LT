@@ -73,21 +73,32 @@ public class UpdateQuestionHandler
         var optionC = request.OptionC?.Trim() ?? string.Empty;
         var optionD = request.OptionD?.Trim() ?? string.Empty;
         var questionType = QuestionAnswerHelper.NormalizeType(request.Type);
-        var correctAnswer = QuestionAnswerHelper.ValidateCorrectAnswer(
-            questionType,
-            request.CorrectAnswer);
 
         if (string.IsNullOrWhiteSpace(noiDung))
             throw new ArgumentException("Nội dung câu hỏi không được để trống.");
 
-        if (string.IsNullOrWhiteSpace(optionA) ||
-            string.IsNullOrWhiteSpace(optionB) ||
-            string.IsNullOrWhiteSpace(optionC) ||
-            string.IsNullOrWhiteSpace(optionD))
+        if (questionType == "single_choice" || questionType == "multiple_choice")
         {
-            throw new ArgumentException(
-                "Câu hỏi phải có đủ 4 phương án A, B, C, D.");
+            if (string.IsNullOrWhiteSpace(optionA) ||
+                string.IsNullOrWhiteSpace(optionB) ||
+                string.IsNullOrWhiteSpace(optionC) ||
+                string.IsNullOrWhiteSpace(optionD))
+            {
+                throw new ArgumentException(
+                    "Câu hỏi trắc nghiệm phải có đủ 4 phương án A, B, C, D.");
+            }
         }
+        else if (questionType == "true_false")
+        {
+            if (string.IsNullOrWhiteSpace(optionA)) optionA = "Đúng";
+            if (string.IsNullOrWhiteSpace(optionB)) optionB = "Sai";
+            optionC = string.Empty;
+            optionD = string.Empty;
+        }
+
+        var correctAnswer = QuestionAnswerHelper.ValidateCorrectAnswer(
+            questionType,
+            request.CorrectAnswer);
 
         question.NoiDung = noiDung;
 

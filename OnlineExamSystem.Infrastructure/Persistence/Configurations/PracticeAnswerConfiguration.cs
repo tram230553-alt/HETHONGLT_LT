@@ -29,11 +29,11 @@ public class PracticeAnswerConfiguration
             .IsRequired();
 
         builder.Property(x => x.StudentAnswer)
-            .HasMaxLength(10);
+            .HasMaxLength(4000);
 
         builder.Property(x => x.CorrectAnswer)
             .IsRequired()
-            .HasMaxLength(10);
+            .HasMaxLength(4000);
 
         builder.HasOne(x => x.Question)
             .WithMany()

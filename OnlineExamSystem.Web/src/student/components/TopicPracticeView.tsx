@@ -347,7 +347,11 @@ export default function TopicPracticeView({
                                         <div className="text-xs font-semibold text-slate-400">
                                             {currentQuestion.type === "multiple_choice"
                                                 ? "Chọn tất cả đáp án đúng"
-                                                : "Chọn 1 đáp án đúng"}
+                                                : currentQuestion.type === "true_false"
+                                                    ? "Chọn Đúng hoặc Sai"
+                                                    : currentQuestion.type === "essay"
+                                                        ? "Tự luận / Điền câu trả lời ngắn"
+                                                        : "Chọn 1 đáp án đúng"}
                                         </div>
                                     </div>
                                 </div>
@@ -380,44 +384,99 @@ export default function TopicPracticeView({
                                     {currentQuestion.noiDung}
                                 </div>
 
-                                <div className="space-y-3">
-                                    {options.map((option) => {
-                                        const selected = (selectedAnswer ?? "")
-                                            .split(",")
-                                            .includes(option.key);
-
-                                        return (
-                                            <button
-                                                key={option.key}
-                                                type="button"
-                                                onClick={() =>
-                                                    selectAnswer(currentQuestion, option.key)
-                                                }
-                                                className={`flex w-full items-center gap-4 rounded-xl border px-4 py-4 text-left transition ${
-                                                    selected
-                                                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/10"
-                                                        : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
-                                                }`}
-                                            >
-                                                <span
-                                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition ${
+                                {currentQuestion.type === "true_false" ? (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {[
+                                            { label: "ĐÚNG", val: "T", color: "emerald" },
+                                            { label: "SAI", val: "F", color: "rose" }
+                                        ].map((item) => {
+                                            const selected = (selectedAnswer ?? "").toUpperCase() === item.val;
+                                            return (
+                                                <button
+                                                    key={item.val}
+                                                    type="button"
+                                                    onClick={() => selectAnswer(currentQuestion, item.val)}
+                                                    className={`py-4 px-5 rounded-2xl border text-sm font-bold transition flex items-center justify-center gap-2 ${
                                                         selected
-                                                            ? "border-blue-600 bg-blue-600 text-white"
-                                                            : "border-slate-300 bg-white text-slate-700"
+                                                            ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20"
+                                                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                                                     }`}
                                                 >
-                                                    {option.key}
-                                                </span>
-                                                <span className="flex-1 text-sm font-semibold leading-6 text-slate-700 md:text-[15px]">
-                                                    {option.text}
-                                                </span>
-                                                {selected && (
-                                                    <Check className="h-5 w-5 shrink-0 text-blue-600" />
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                                    <span className="text-base">{item.val === "T" ? "✓" : "✗"}</span>
+                                                    <span>{item.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : currentQuestion.type === "essay" ? (
+                                    <div className="space-y-4">
+                                        {[currentQuestion.optionA, currentQuestion.optionB, currentQuestion.optionC, currentQuestion.optionD].some(Boolean) && (
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                                                <p className="text-xs font-bold text-slate-500">Các ý tham khảo/gợi ý:</p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                                    {currentQuestion.optionA && <div className="p-2.5 bg-white rounded-xl border border-slate-200"><strong>a)</strong> {currentQuestion.optionA}</div>}
+                                                    {currentQuestion.optionB && <div className="p-2.5 bg-white rounded-xl border border-slate-200"><strong>b)</strong> {currentQuestion.optionB}</div>}
+                                                    {currentQuestion.optionC && <div className="p-2.5 bg-white rounded-xl border border-slate-200"><strong>c)</strong> {currentQuestion.optionC}</div>}
+                                                    {currentQuestion.optionD && <div className="p-2.5 bg-white rounded-xl border border-slate-200"><strong>d)</strong> {currentQuestion.optionD}</div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <textarea
+                                            rows={5}
+                                            value={selectedAnswer ?? ""}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setAnswers((prev) => {
+                                                    const next = { ...prev };
+                                                    if (val.trim()) next[currentQuestion.id] = val;
+                                                    else delete next[currentQuestion.id];
+                                                    return next;
+                                                });
+                                            }}
+                                            placeholder="Nhập câu trả lời hoặc lời giải tự luận của bạn..."
+                                            className="w-full rounded-2xl border border-slate-200 p-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {options.map((option) => {
+                                            const selected = (selectedAnswer ?? "")
+                                                .split(",")
+                                                .includes(option.key);
+
+                                            return (
+                                                <button
+                                                    key={option.key}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        selectAnswer(currentQuestion, option.key)
+                                                    }
+                                                    className={`flex w-full items-center gap-4 rounded-xl border px-4 py-4 text-left transition ${
+                                                        selected
+                                                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/10"
+                                                            : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition ${
+                                                            selected
+                                                                ? "border-blue-600 bg-blue-600 text-white"
+                                                                : "border-slate-300 bg-white text-slate-700"
+                                                        }`}
+                                                    >
+                                                        {option.key}
+                                                    </span>
+                                                    <span className="flex-1 text-sm font-semibold leading-6 text-slate-700 md:text-[15px]">
+                                                        {option.text}
+                                                    </span>
+                                                    {selected && (
+                                                        <Check className="h-5 w-5 shrink-0 text-blue-600" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-between gap-4 border-t border-slate-200 bg-slate-50 px-5 py-4 md:px-7">

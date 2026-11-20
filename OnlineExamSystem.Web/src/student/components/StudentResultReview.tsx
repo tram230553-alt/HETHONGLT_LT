@@ -146,60 +146,94 @@ export default function StudentResultReview({
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2.5">
-                {answerLetters.map((letter) => {
-                  const isCorrectAnswer = correctSet.has(letter);
-                  const isSelected = selectedSet.has(letter);
-
-                  let className =
-                    "border-[var(--theme-border)] bg-white text-[var(--theme-text)]";
-
-                  if (isCorrectAnswer) {
-                    className =
-                      "border-emerald-200 bg-emerald-50 text-emerald-800";
-                  } else if (isSelected) {
-                    className = "border-rose-200 bg-rose-50 text-rose-700";
-                  }
-
-                  return (
-                    <div
-                      key={letter}
-                      className={`flex items-start gap-3 rounded-xl border p-3 ${className}`}
-                    >
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
-                          isCorrectAnswer
-                            ? "bg-emerald-600 text-white"
-                            : isSelected
-                              ? "bg-rose-500 text-white"
-                              : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {letter}
-                      </span>
-                      <span className="flex-1 pt-0.5 text-sm font-semibold leading-relaxed">
-                        {getOptionText(question, letter)}
-                      </span>
-                      {isCorrectAnswer && (
-                        <span className="shrink-0 text-xs font-black text-emerald-600">
-                          Đáp án đúng
-                        </span>
-                      )}
-                      {!isCorrectAnswer && isSelected && (
-                        <span className="shrink-0 text-xs font-black text-rose-500">
-                          Bạn chọn
-                        </span>
-                      )}
+              {question.type === "true_false" ? (
+                <div className="mt-4 space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between ${
+                      correct.toUpperCase() === "T" ? "border-emerald-300 bg-emerald-50 text-emerald-800" : selected.toUpperCase() === "T" ? "border-rose-300 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-50 text-slate-500"
+                    }`}>
+                      <span>ĐÚNG (T)</span>
+                      {correct.toUpperCase() === "T" && <span className="text-[10px] text-emerald-600 font-black">Đáp án đúng</span>}
+                      {selected.toUpperCase() === "T" && correct.toUpperCase() !== "T" && <span className="text-[10px] text-rose-600 font-black">Bạn chọn</span>}
                     </div>
-                  );
-                })}
-              </div>
-
-              {!question.isCorrect && (
-                <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
-                  <span className="font-black">Đáp án đúng: {correct}</span>
-                  {correct && ` - ${getOptionText(question, correct)}`}
+                    <div className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between ${
+                      correct.toUpperCase() === "F" ? "border-emerald-300 bg-emerald-50 text-emerald-800" : selected.toUpperCase() === "F" ? "border-rose-300 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-50 text-slate-500"
+                    }`}>
+                      <span>SAI (F)</span>
+                      {correct.toUpperCase() === "F" && <span className="text-[10px] text-emerald-600 font-black">Đáp án đúng</span>}
+                      {selected.toUpperCase() === "F" && correct.toUpperCase() !== "F" && <span className="text-[10px] text-rose-600 font-black">Bạn chọn</span>}
+                    </div>
+                  </div>
                 </div>
+              ) : question.type === "essay" ? (
+                <div className="mt-4 space-y-3">
+                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
+                    <span className="font-bold text-slate-500 block mb-1">Bài làm của bạn:</span>
+                    <p className="font-semibold text-slate-800 whitespace-pre-wrap">{selected || "(Chưa nhập câu trả lời)"}</p>
+                  </div>
+                  <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-900">
+                    <span className="font-bold text-emerald-700 block mb-1">Đáp án chuẩn / Hướng dẫn:</span>
+                    <p className="font-semibold whitespace-pre-wrap">{correct}</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="mt-4 space-y-2.5">
+                    {answerLetters.map((letter) => {
+                      const isCorrectAnswer = correctSet.has(letter);
+                      const isSelected = selectedSet.has(letter);
+
+                      let className =
+                        "border-[var(--theme-border)] bg-white text-[var(--theme-text)]";
+
+                      if (isCorrectAnswer) {
+                        className =
+                          "border-emerald-200 bg-emerald-50 text-emerald-800";
+                      } else if (isSelected) {
+                        className = "border-rose-200 bg-rose-50 text-rose-700";
+                      }
+
+                      return (
+                        <div
+                          key={letter}
+                          className={`flex items-start gap-3 rounded-xl border p-3 ${className}`}
+                        >
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                              isCorrectAnswer
+                                ? "bg-emerald-600 text-white"
+                                : isSelected
+                                  ? "bg-rose-500 text-white"
+                                  : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {letter}
+                          </span>
+                          <span className="flex-1 pt-0.5 text-sm font-semibold leading-relaxed">
+                            {getOptionText(question, letter)}
+                          </span>
+                          {isCorrectAnswer && (
+                            <span className="shrink-0 text-xs font-black text-emerald-600">
+                              Đáp án đúng
+                            </span>
+                          )}
+                          {!isCorrectAnswer && isSelected && (
+                            <span className="shrink-0 text-xs font-black text-rose-500">
+                              Bạn chọn
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {!question.isCorrect && (
+                    <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
+                      <span className="font-black">Đáp án đúng: {correct}</span>
+                      {correct && ` - ${getOptionText(question, correct)}`}
+                    </div>
+                  )}
+                </>
               )}
             </article>
           );

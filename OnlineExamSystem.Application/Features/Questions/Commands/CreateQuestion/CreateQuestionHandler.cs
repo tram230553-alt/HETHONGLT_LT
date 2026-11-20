@@ -113,21 +113,36 @@ public class CreateQuestionHandler
             request.OptionD?.Trim() ?? string.Empty;
 
 
-        if (string.IsNullOrWhiteSpace(optionA) ||
-            string.IsNullOrWhiteSpace(optionB) ||
-            string.IsNullOrWhiteSpace(optionC) ||
-            string.IsNullOrWhiteSpace(optionD))
-        {
-            throw new ArgumentException(
-                "Câu hỏi phải có đủ 4 phương án A, B, C, D.");
-        }
+        var questionType = QuestionAnswerHelper.NormalizeType(request.Type);
 
+        if (questionType == "single_choice" || questionType == "multiple_choice")
+        {
+            if (string.IsNullOrWhiteSpace(optionA) ||
+                string.IsNullOrWhiteSpace(optionB) ||
+                string.IsNullOrWhiteSpace(optionC) ||
+                string.IsNullOrWhiteSpace(optionD))
+            {
+                throw new ArgumentException(
+                    "Câu hỏi trắc nghiệm phải có đủ 4 phương án A, B, C, D.");
+            }
+        }
+        else if (questionType == "true_false")
+        {
+            if (string.IsNullOrWhiteSpace(optionA)) optionA = "Đúng";
+            if (string.IsNullOrWhiteSpace(optionB)) optionB = "Sai";
+            optionC = string.Empty;
+            optionD = string.Empty;
+        }
+        else if (questionType == "essay")
+        {
+            // Tự luận hoặc Điền khuyết ý a,b,c,d
+            // Nếu có nhập các ý phụ ở optionA, B, C, D thì giữ lại, không bắt buộc đủ 4
+        }
 
         // ============================================
         // 6. VALIDATE ĐÁP ÁN
         // ============================================
 
-        var questionType = QuestionAnswerHelper.NormalizeType(request.Type);
         var correctAnswer = QuestionAnswerHelper.ValidateCorrectAnswer(
             questionType,
             request.CorrectAnswer);

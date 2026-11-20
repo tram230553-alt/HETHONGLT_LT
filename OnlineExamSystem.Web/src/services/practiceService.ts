@@ -6,7 +6,7 @@ import { apiRequest } from "./apiClient";
 
 export interface PracticeQuestionDto {
     id: string;
-    type: "single_choice" | "multiple_choice";
+    type: "single_choice" | "multiple_choice" | "true_false" | "essay";
 
     noiDung: string;
 

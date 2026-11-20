@@ -120,19 +120,35 @@ public class SubmitExamHandler
 
         foreach (var answer in answers)
         {
-            if (!QuestionAnswerHelper.IsValidSubmittedAnswer(answer.SelectedAnswer))
+            var question = examQuestions.First(x => x.QuestionId == answer.QuestionId).Question;
+            var normalizedType = QuestionAnswerHelper.NormalizeType(question.Type);
+
+            if (!QuestionAnswerHelper.IsValidSubmittedAnswer(normalizedType, answer.SelectedAnswer))
             {
                 throw new InvalidOperationException(
-                    "Đáp án chỉ được gồm các giá trị A, B, C, D và không được lặp.");
+                    normalizedType == "true_false"
+                        ? "Đáp án câu hỏi Đúng/Sai chỉ được chọn Đúng (T) hoặc Sai (F)."
+                        : normalizedType == "essay"
+                            ? "Đáp án tự luận không hợp lệ."
+                            : "Đáp án chỉ được gồm các giá trị A, B, C, D và không được lặp.");
             }
 
-            answer.SelectedAnswer = QuestionAnswerHelper.NormalizeAnswerSet(answer.SelectedAnswer);
-
-            var question = examQuestions.First(x => x.QuestionId == answer.QuestionId).Question;
-            if (QuestionAnswerHelper.NormalizeType(question.Type) == "single_choice" &&
-                answer.SelectedAnswer.Contains(','))
+            if (normalizedType == "true_false")
             {
-                throw new InvalidOperationException("Câu hỏi một đáp án chỉ được chọn một phương án.");
+                answer.SelectedAnswer = QuestionAnswerHelper.NormalizeTrueFalseAnswer(answer.SelectedAnswer);
+            }
+            else if (normalizedType == "essay")
+            {
+                answer.SelectedAnswer = QuestionAnswerHelper.NormalizeEssayText(answer.SelectedAnswer);
+            }
+            else
+            {
+                answer.SelectedAnswer = QuestionAnswerHelper.NormalizeAnswerSet(answer.SelectedAnswer);
+
+                if (normalizedType == "single_choice" && answer.SelectedAnswer.Contains(','))
+                {
+                    throw new InvalidOperationException("Câu hỏi một đáp án chỉ được chọn một phương án.");
+                }
             }
         }
 
@@ -161,10 +177,7 @@ public class SubmitExamHandler
 
             var isCorrect =
                 !string.IsNullOrWhiteSpace(selectedAnswer) &&
-                string.Equals(
-                    selectedAnswer,
-                    QuestionAnswerHelper.NormalizeAnswerSet(item.Question.CorrectAnswer),
-                    StringComparison.OrdinalIgnoreCase);
+                QuestionAnswerHelper.CompareAnswers(item.Question.Type, selectedAnswer, item.Question.CorrectAnswer);
 
             if (isCorrect)
             {

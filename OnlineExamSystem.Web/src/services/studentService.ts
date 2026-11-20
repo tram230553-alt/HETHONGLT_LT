@@ -29,7 +29,7 @@ export interface StudentAvailableExamDto {
 
 export interface StudentQuestionDto {
     id: string;
-    type: "single_choice" | "multiple_choice";
+    type: "single_choice" | "multiple_choice" | "true_false" | "essay";
     noiDung: string;
     optionA: string;
     optionB: string;
@@ -133,6 +133,7 @@ export interface StudentResultQuestionDetailDto {
     optionD: string;
     selectedAnswer: string;
     correctAnswer: string;
+    type?: "single_choice" | "multiple_choice" | "true_false" | "essay";
     isCorrect: boolean;
 }
 

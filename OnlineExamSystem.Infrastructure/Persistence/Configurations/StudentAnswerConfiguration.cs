@@ -18,7 +18,7 @@ namespace OnlineExamSystem.Infrastructure.Persistence.Configurations;
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.SelectedAnswer)
-                .HasMaxLength(10);
+                .HasMaxLength(4000);
 
             builder.HasOne(x => x.ExamResult)
                 .WithMany(x => x.StudentAnswers)

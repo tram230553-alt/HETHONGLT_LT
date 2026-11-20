@@ -696,6 +696,16 @@ export default function TeacherQuestionManagementView({
                 showToast?.("Câu nhiều đáp án phải có ít nhất 2 đáp án đúng.", "error");
                 return;
             }
+        } else if (editorType === "true_false") {
+            if (!editorCorrectAnswer || (editorCorrectAnswer !== "T" && editorCorrectAnswer !== "F")) {
+                showToast?.("Vui lòng chọn đáp án đúng là Đúng hoặc Sai.", "error");
+                return;
+            }
+        } else if (editorType === "essay") {
+            if (!editorCorrectAnswer.trim()) {
+                showToast?.("Vui lòng nhập đáp án chuẩn hoặc từ khóa tham chiếu cho câu tự luận.", "error");
+                return;
+            }
         }
 
 
@@ -2952,11 +2962,19 @@ function QuestionFormModal({
                             >
 
                                 <option value="single_choice">
-                                    Một đáp án
+                                    Một đáp án (A,B,C,D)
                                 </option>
 
                                 <option value="multiple_choice">
-                                    Nhiều đáp án
+                                    Nhiều đáp án (chọn nhiều ý)
+                                </option>
+
+                                <option value="true_false">
+                                    Đúng / Sai
+                                </option>
+
+                                <option value="essay">
+                                    Tự luận / Điền câu trả lời ngắn
                                 </option>
 
                             </select>
@@ -3019,7 +3037,74 @@ function QuestionFormModal({
 
                     {/* OPTIONS */}
 
-                    <div>
+                    {type === "true_false" ? (
+                        <div>
+                            <label className="mb-3 block text-sm font-black text-slate-700">
+                                Đáp án đúng
+                                <span className="ml-2 text-xs font-semibold text-slate-400">
+                                    (chọn Đúng hoặc Sai cho mệnh đề này)
+                                </span>
+                            </label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setCorrectAnswer("T")}
+                                    className={`py-3.5 px-4 rounded-xl border text-sm font-black transition flex items-center justify-center gap-2 ${
+                                        correctAnswer === "T"
+                                            ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm"
+                                            : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                    }`}
+                                >
+                                    ✓ ĐÚNG (T)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCorrectAnswer("F")}
+                                    className={`py-3.5 px-4 rounded-xl border text-sm font-black transition flex items-center justify-center gap-2 ${
+                                        correctAnswer === "F"
+                                            ? "border-rose-600 bg-rose-50 text-rose-700 shadow-sm"
+                                            : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                    }`}
+                                >
+                                    ✗ SAI (F)
+                                </button>
+                            </div>
+                        </div>
+                    ) : type === "essay" ? (
+                        <div className="space-y-3">
+                            <div>
+                                <label className="mb-2 block text-sm font-black text-slate-700">
+                                    Đáp án chuẩn / Từ khóa chính xác
+                                    <span className="ml-2 text-xs font-normal text-slate-400">
+                                        (dùng để chấm tự động nếu câu ngắn/từ khóa, có thể nhập nhiều đáp án ngăn cách bởi dấu /)
+                                    </span>
+                                </label>
+                                <input
+                                    value={correctAnswer}
+                                    onChange={(e) => setCorrectAnswer(e.target.value)}
+                                    placeholder="Ví dụ: 12.5 hoặc Hà Nội/TP.HCM hoặc câu trả lời mẫu"
+                                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-xs font-bold text-slate-500">
+                                    Các ý phụ (nếu là dạng câu hỏi theo ý a, b, c, d hoặc các câu hỏi nhỏ):
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {["a", "b", "c", "d"].map((subLabel, idx) => (
+                                        <input
+                                            key={subLabel}
+                                            value={options[idx] ?? ""}
+                                            onChange={(e) => updateOption(idx, e.target.value)}
+                                            placeholder={`Ý ${subLabel}) (tùy chọn)`}
+                                            className="rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-500"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
 
                         <label
                             className="
@@ -3109,7 +3194,8 @@ function QuestionFormModal({
 
                         </div>
 
-                    </div>
+                        </div>
+                    )}
 
 
                     {/* EXPLANATION */}
