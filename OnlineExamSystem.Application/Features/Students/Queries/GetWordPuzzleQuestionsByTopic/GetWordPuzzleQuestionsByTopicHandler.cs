@@ -47,28 +47,28 @@ public class GetWordPuzzleQuestionsByTopicHandler
             throw new KeyNotFoundException("Topic không tồn tại hoặc đã bị khóa.");
         }
 
-        // Lấy các câu hỏi tự luận (essay) hoặc câu có đáp án ngắn
-        var questions = await _context.Questions
+        // Lấy tất cả câu hỏi tự luận (essay) của chủ đề, không phân biệt cấp độ dễ/khó
+        var essayQuestions = await _context.Questions
             .AsNoTracking()
-            .Where(q => q.TopicId == request.TopicId)
+            .Where(q => q.TopicId == request.TopicId && q.Type == "essay")
             .OrderBy(q => q.CreatedAt)
             .ThenBy(q => q.Id)
             .ToListAsync(cancellationToken);
 
         var result = new List<StudentWordPuzzleQuestionDto>();
 
-        foreach (var q in questions)
+        foreach (var q in essayQuestions)
         {
-            // Trích xuất từ đáp án thích hợp để làm game nối chữ
-            var candidateAnswer = ExtractBestWordAnswer(q);
-            if (string.IsNullOrWhiteSpace(candidateAnswer)) continue;
+            var wordAnswer = ExtractEssayWordAnswer(q.CorrectAnswer);
+            if (string.IsNullOrWhiteSpace(wordAnswer)) continue;
 
             result.Add(new StudentWordPuzzleQuestionDto
             {
                 Id = q.Id,
                 NoiDung = q.NoiDung,
-                WordAnswer = candidateAnswer.Trim().ToUpperInvariant(),
-                Hint = !string.IsNullOrWhiteSpace(q.OptionA) ? $"{q.OptionA}" : "Tìm từ khóa đáp án trong bảng chữ",
+                WordAnswer = wordAnswer,
+                DisplayAnswer = !string.IsNullOrWhiteSpace(q.CorrectAnswer) ? q.CorrectAnswer.Trim() : wordAnswer,
+                Hint = !string.IsNullOrWhiteSpace(q.OptionA) ? q.OptionA : "Tìm từ khóa đáp án trong bảng chữ",
                 Explanation = q.Explanation,
                 TopicId = topic.Id,
                 TopicName = topic.Name
@@ -78,46 +78,27 @@ public class GetWordPuzzleQuestionsByTopicHandler
         return result;
     }
 
-    private static string ExtractBestWordAnswer(Question q)
+    private static string ExtractEssayWordAnswer(string? rawAnswer)
     {
-        // 1. Nếu là dạng essay: lấy đáp án CorrectAnswer
-        if (q.Type == "essay")
-        {
-            if (!string.IsNullOrWhiteSpace(q.CorrectAnswer))
-            {
-                var firstOption = q.CorrectAnswer.Split(new[] { '/', ';', '|' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => CleanWord(x))
-                    .FirstOrDefault(x => !string.IsNullOrEmpty(x) && x.Length >= 2 && x.Length <= 15);
+        if (string.IsNullOrWhiteSpace(rawAnswer)) return string.Empty;
 
-                if (!string.IsNullOrEmpty(firstOption)) return firstOption;
+        // Nếu câu tự luận có nhiều phương án chấp nhận (ngăn cách bởi dấu /, ;, | hoặc dấu phẩy)
+        var options = rawAnswer.Split(new[] { '/', ';', '|', ',' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var opt in options)
+        {
+            var cleaned = CleanWord(opt);
+            // Từ nối thích hợp trong ma trận chữ cái có độ dài từ 2 đến 15 ký tự
+            if (cleaned.Length >= 2 && cleaned.Length <= 15)
+            {
+                return cleaned;
             }
         }
 
-        // 2. Nếu là các câu hỏi khác nhưng đáp án ngắn hoặc có từ khóa
-        if (!string.IsNullOrWhiteSpace(q.CorrectAnswer))
+        // Fallback: làm sạch toàn bộ chuỗi đáp án
+        var fallbackCleaned = CleanWord(rawAnswer);
+        if (fallbackCleaned.Length >= 2 && fallbackCleaned.Length <= 15)
         {
-            var cleaned = CleanWord(q.CorrectAnswer);
-            if (cleaned.Length >= 2 && cleaned.Length <= 15) return cleaned;
-        }
-
-        // 3. Nếu là trắc nghiệm nhưng nội dung đáp án A, B, C, D là từ đơn
-        if (q.Type == "single_choice" && !string.IsNullOrWhiteSpace(q.CorrectAnswer))
-        {
-            var letter = q.CorrectAnswer.Trim().ToUpperInvariant();
-            var optText = letter switch
-            {
-                "A" => q.OptionA,
-                "B" => q.OptionB,
-                "C" => q.OptionC,
-                "D" => q.OptionD,
-                _ => string.Empty
-            };
-
-            var cleanedOpt = CleanWord(optText);
-            if (cleanedOpt.Length >= 2 && cleanedOpt.Length <= 15 && !cleanedOpt.Contains(' '))
-            {
-                return cleanedOpt;
-            }
+            return fallbackCleaned;
         }
 
         return string.Empty;
@@ -126,6 +107,7 @@ public class GetWordPuzzleQuestionsByTopicHandler
     private static string CleanWord(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        // Giữ lại ký tự chữ (bao gồm cả tiếng Việt có dấu) và số, bỏ dấu cách và dấu câu
         var stripped = Regex.Replace(raw.Trim(), @"[^\p{L}\p{N}]", "").ToUpperInvariant();
         return stripped;
     }

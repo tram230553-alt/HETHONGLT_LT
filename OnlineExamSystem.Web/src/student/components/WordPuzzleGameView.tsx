@@ -583,7 +583,7 @@ export default function WordPuzzleGameView({
 
                     {/* Tiêu đề câu hỏi */}
                     <h2 className="text-base md:text-lg font-black text-slate-800 leading-snug px-2">
-                        {currentQuestion?.questionText}
+                        {currentQuestion?.questionText || (currentQuestion as unknown as { noiDung?: string })?.noiDung}
                     </h2>
 
                     {/* HÀNG CÁC Ô CHỮ NÉT ĐỨT (Dashed Letter Slots) */}
