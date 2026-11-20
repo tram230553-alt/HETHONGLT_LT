@@ -552,6 +552,7 @@ export const DEFAULT_USER_STATS: UserStats = {
   targetScore: 27.5,
   currentStreak: 5, // 5 ngày học liên tục
   gems: 420, // điểm kim cương/kinh nghiệm
+  stars: 10, // ⭐ Số sao tích điểm để dùng gợi ý trong game
   dailyGoalMinutes: 30, // 30 phút một ngày
   todayMinutesStudied: 18, // Đã học được 18 phút hôm nay
   subjectProgress: {

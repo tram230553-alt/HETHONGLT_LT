@@ -24,6 +24,7 @@ interface PracticeResultViewProps {
     onBack: () => void;
     onRetry?: () => void;
     onStartWordGame?: () => void;
+    earnedStars?: number | null;
 }
 
 export default function PracticeResultView({
@@ -31,6 +32,7 @@ export default function PracticeResultView({
     onBack,
     onRetry,
     onStartWordGame,
+    earnedStars,
 }: PracticeResultViewProps) {
     const [detail, setDetail] =
         React.useState<PracticeAttemptDetailDto | null>(null);
@@ -314,6 +316,23 @@ export default function PracticeResultView({
             </header>
 
             <div className="mx-auto max-w-[1500px] px-4 py-6 md:px-6">
+                {/* THÔNG BÁO TÍCH ĐIỂM SAO SAU KHI HỌC XONG BÀI */}
+                {earnedStars && earnedStars > 0 && (
+                    <div className="mb-5 flex items-center gap-3.5 rounded-3xl bg-gradient-to-r from-amber-500/20 via-yellow-400/20 to-amber-500/10 border-2 border-amber-400/50 p-4 shadow-xs">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 shadow-md text-2xl">
+                            ⭐
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="font-black text-amber-900 text-sm md:text-base">
+                                Chúc mừng bạn đã hoàn thành bài học và nhận được +{earnedStars} Sao tích điểm!
+                            </h4>
+                            <p className="text-xs text-amber-800/80 mt-0.5">
+                                Số sao này đã được cộng vào tài khoản để bạn dùng làm gợi ý khi tham gia Minigame Nối Chữ.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* BANNER GỢI Ý CHƠI GAME NỐI CHỮ SAU KHI HỌC XONG */}
                 {onStartWordGame && (
                     <div className="mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-3xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/15 border-2 border-amber-400/40 p-4 md:p-5 shadow-sm">

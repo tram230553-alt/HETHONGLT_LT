@@ -101,7 +101,9 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     const cached = localStorage.getItem("smartexam_user_stats");
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        if (typeof parsed.stars !== "number") parsed.stars = 10;
+        return parsed;
       } catch (e) {
         // Fallback if parsing fails
       }
@@ -246,6 +248,30 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     }));
   };
 
+  // HÀM: Thưởng sao tích điểm khi học xong một bài luyện tập
+  const handleEarnStars = (amount: number) => {
+    setStats((prev) => {
+      const current = prev.stars ?? 0;
+      const next = { ...prev, stars: current + amount };
+      localStorage.setItem("smartexam_user_stats", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // HÀM: Trừ sao tích điểm khi dùng gợi ý trong trò chơi nối chữ
+  const handleUseStars = (amount: number = 1): boolean => {
+    const current = stats.stars ?? 0;
+    if (current >= amount) {
+      setStats((prev) => {
+        const next = { ...prev, stars: (prev.stars ?? 0) - amount };
+        localStorage.setItem("smartexam_user_stats", JSON.stringify(next));
+        return next;
+      });
+      return true;
+    }
+    return false;
+  };
+
   // HÀM: Ghi nhận đề thi vừa xong vào lịch sử
   const handleAddHistoryLog = async (item: CleanHistoryItem, skipServerSync: boolean = false) => {
     setHistoryLogs((prev) => {
@@ -371,6 +397,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                         onBack={() => {
                             setSelectedTopic(null);
                         }}
+                        onEarnStars={handleEarnStars}
                     />
                 );
             }
@@ -392,6 +419,8 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                             setSelectedWordGameTopic(null);
                         }}
                         onEarnGems={handleEarnGems}
+                        userStars={stats.stars ?? 0}
+                        onUseStars={handleUseStars}
                     />
                 );
             }
@@ -586,6 +615,16 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
             </div>
 
             <div className="flex items-center gap-2 md:gap-3">
+
+              {/* Tích điểm Sao (Stars) */}
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-700 font-black text-xs shadow-xs"
+                title={`Bạn đang có ${stats.stars ?? 0} Sao. Hoàn thành bài học để tích lũy thêm sao dùng cho gợi ý game!`}
+              >
+                <span className="text-sm">⭐</span>
+                <span>{stats.stars ?? 0}</span>
+                <span className="hidden sm:inline text-[10px] text-amber-600/80 font-bold uppercase">Sao</span>
+              </div>
 
               <button className="hidden sm:flex relative w-9 h-9 rounded-xl items-center justify-center text-[var(--theme-text-light)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-surface-soft)] transition">
                 <Bell className="w-4.5 h-4.5" />

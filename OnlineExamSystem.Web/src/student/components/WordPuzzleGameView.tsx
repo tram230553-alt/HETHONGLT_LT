@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     X,
     Clock,
     Star,
     Lightbulb,
-    ArrowRight,
     RotateCcw,
     Trophy,
     CheckCircle2,
+    XCircle,
     Volume2,
     VolumeX,
     Sparkles,
     AlertCircle,
+    PartyPopper,
+    Gamepad2,
 } from "lucide-react";
 import type { TopicDto } from "../../services/topicService";
 import {
@@ -27,6 +29,8 @@ interface WordPuzzleGameViewProps {
     topic: TopicDto;
     onBack: () => void;
     onEarnGems?: (amount: number) => void;
+    userStars?: number;
+    onUseStars?: (amount: number) => boolean;
 }
 
 /* =========================================================
@@ -41,6 +45,13 @@ interface Cell {
     colorClass: string;
     isTarget?: boolean;
     targetIndex?: number;
+}
+
+interface QuestionHistoryItem {
+    id: string;
+    questionText: string;
+    wordAnswer: string;
+    isCorrect: boolean;
 }
 
 /* =========================================================
@@ -103,12 +114,12 @@ class SoundEffects {
             const gain = ctx.createGain();
             osc.type = "triangle";
             osc.frequency.setValueAtTime(f, ctx.currentTime + idx * 0.08);
-            gain.gain.setValueAtTime(0.18, ctx.currentTime + idx * 0.08);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.25);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.22);
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start(ctx.currentTime + idx * 0.08);
-            osc.stop(ctx.currentTime + idx * 0.08 + 0.25);
+            osc.stop(ctx.currentTime + idx * 0.08 + 0.22);
         });
     }
 
@@ -118,14 +129,14 @@ class SoundEffects {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(190, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.25);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.frequency.setValueAtTime(160, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
-        osc.stop(ctx.currentTime + 0.25);
+        osc.stop(ctx.currentTime + 0.2);
     }
 
     playVictory() {
@@ -136,13 +147,13 @@ class SoundEffects {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = "square";
-            osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-            gain.gain.setValueAtTime(0.12, ctx.currentTime + i * 0.12);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.4);
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime + i * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.35);
             osc.connect(gain);
             gain.connect(ctx.destination);
-            osc.start(ctx.currentTime + i * 0.12);
-            osc.stop(ctx.currentTime + i * 0.12 + 0.4);
+            osc.start(ctx.currentTime + i * 0.1);
+            osc.stop(ctx.currentTime + i * 0.1 + 0.35);
         });
     }
 }
@@ -150,7 +161,7 @@ class SoundEffects {
 const sounds = new SoundEffects();
 
 /* =========================================================
-   GRID GENERATOR (4x4 or 5x5 based on word length)
+   GRID GENERATOR (AlphaBetty style random walk)
 ========================================================= */
 
 const DIRECTIONS = [
@@ -158,14 +169,14 @@ const DIRECTIONS = [
     [-1, -1], [-1, 1], [1, -1], [1, 1],
 ];
 
-const FILLER_POOL = "AABCDEEEGHIKLMNNNOOPPQRSTTUUVXY";
+const FILLER_LETTERS = "AABCDEEEGHIKLMNNNOOPPQRSTTUUVXY";
 
-function generatePuzzleGrid(word: string): { grid: Cell[][]; path: [number, number][] } {
-    const cleanedWord = (word || "").toUpperCase().replace(/[^A-Z0-9À-Ỹ]/g, "");
-    const wordLen = cleanedWord.length || 3;
-    const size = wordLen > 8 ? 5 : 4; // Bảng 4x4 theo mẫu nếu từ <= 8 ký tự
+function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number, number][] } {
+    const cleaned = (targetWord || "").toUpperCase().replace(/[^A-Z0-9À-Ỹ]/g, "");
+    const wordLen = cleaned.length || 3;
+    const size = wordLen > 8 ? 5 : 4; // 4x4 or 5x5
 
-    for (let attempt = 0; attempt < 120; attempt++) {
+    for (let attempt = 0; attempt < 80; attempt++) {
         const matrix: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
         const visited = new Set<string>();
         const path: [number, number][] = [];
@@ -175,17 +186,17 @@ function generatePuzzleGrid(word: string): { grid: Cell[][]; path: [number, numb
 
         let currR = startR;
         let currC = startC;
-        matrix[currR][currC] = cleanedWord[0] || "A";
+        matrix[currR][currC] = cleaned[0] || "A";
         visited.add(`${currR},${currC}`);
         path.push([currR, currC]);
 
         let success = true;
         for (let i = 1; i < wordLen; i++) {
-            const shuffledDirs = [...DIRECTIONS].sort(() => Math.random() - 0.5);
+            const shuffled = [...DIRECTIONS].sort(() => Math.random() - 0.5);
             let nextR = -1;
             let nextC = -1;
 
-            for (const [dr, dc] of shuffledDirs) {
+            for (const [dr, dc] of shuffled) {
                 const nr = currR + dr;
                 const nc = currC + dc;
                 if (nr >= 0 && nr < size && nc >= 0 && nc < size && !visited.has(`${nr},${nc}`)) {
@@ -202,67 +213,59 @@ function generatePuzzleGrid(word: string): { grid: Cell[][]; path: [number, numb
 
             currR = nextR;
             currC = nextC;
-            matrix[currR][currC] = cleanedWord[i];
+            matrix[currR][currC] = cleaned[i];
             visited.add(`${currR},${currC}`);
             path.push([currR, currC]);
         }
 
         if (success) {
-            const targetMap = new Map<string, number>();
-            path.forEach(([r, c], idx) => targetMap.set(`${r},${c}`, idx));
+            const pathMap = new Map<string, number>();
+            path.forEach(([r, c], idx) => pathMap.set(`${r},${c}`, idx));
 
             const grid: Cell[][] = [];
-            let colorIdx = Math.floor(Math.random() * PASTEL_COLORS.length);
-
             for (let r = 0; r < size; r++) {
                 const rowCells: Cell[] = [];
                 for (let c = 0; c < size; c++) {
-                    const key = `${r},${c}`;
-                    const isTarget = targetMap.has(key);
-                    const targetIndex = targetMap.get(key);
-
+                    const isTarget = pathMap.has(`${r},${c}`);
+                    const targetIdx = pathMap.get(`${r},${c}`);
                     let char = matrix[r][c];
                     if (!char) {
-                        char = FILLER_POOL[Math.floor(Math.random() * FILLER_POOL.length)];
+                        char = FILLER_LETTERS[Math.floor(Math.random() * FILLER_LETTERS.length)];
                     }
-
-                    // Phân bổ màu pastel xen kẽ đẹp mắt
-                    const color = PASTEL_COLORS[(colorIdx + r * size + c) % PASTEL_COLORS.length];
-
+                    const color = PASTEL_COLORS[(r * size + c) % PASTEL_COLORS.length];
                     rowCells.push({
-                        id: `cell-${r}-${c}`,
+                        id: `c-${r}-${c}`,
                         row: r,
                         col: c,
                         letter: char,
                         colorClass: color,
                         isTarget,
-                        targetIndex,
+                        targetIndex: targetIdx,
                     });
                 }
                 grid.push(rowCells);
             }
-
             return { grid, path };
         }
     }
 
-    // Fallback nếu không tìm thấy đường uốn lượn:
+    // Fallback: xếp thẳng hàng
     const grid: Cell[][] = [];
     const path: [number, number][] = [];
-    let colorIdx = 0;
     for (let r = 0; r < size; r++) {
         const rowCells: Cell[] = [];
         for (let c = 0; c < size; c++) {
             const idx = r * size + c;
-            const char = idx < wordLen ? cleanedWord[idx] : FILLER_POOL[Math.floor(Math.random() * FILLER_POOL.length)];
             const isTarget = idx < wordLen;
+            const char = isTarget ? cleaned[idx] : FILLER_LETTERS[Math.floor(Math.random() * FILLER_LETTERS.length)];
             if (isTarget) path.push([r, c]);
+            const color = PASTEL_COLORS[(r * size + c) % PASTEL_COLORS.length];
             rowCells.push({
-                id: `cell-${r}-${c}`,
+                id: `c-${r}-${c}`,
                 row: r,
                 col: c,
                 letter: char,
-                colorClass: PASTEL_COLORS[(colorIdx++) % PASTEL_COLORS.length],
+                colorClass: color,
                 isTarget,
                 targetIndex: isTarget ? idx : undefined,
             });
@@ -280,16 +283,22 @@ export default function WordPuzzleGameView({
     topic,
     onBack,
     onEarnGems,
+    userStars = 0,
+    onUseStars,
 }: WordPuzzleGameViewProps) {
     const [questions, setQuestions] = useState<WordPuzzleQuestionDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Trạng thái chơi
+    // Trạng thái chơi & Thống kê đúng/sai
     const [currentIndex, setCurrentIndex] = useState(0);
     const [score, setScore] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(90); // 1:30
+    const [timeLeft, setTimeLeft] = useState(120); // 2:00
     const [soundOn, setSoundOn] = useState(true);
+
+    const [correctCount, setCorrectCount] = useState(0);
+    const [wrongCount, setWrongCount] = useState(0);
+    const [historyResults, setHistoryResults] = useState<QuestionHistoryItem[]>([]);
 
     // Grid và lựa chọn
     const [grid, setGrid] = useState<Cell[][]>([]);
@@ -301,6 +310,7 @@ export default function WordPuzzleGameView({
     const [solvedCurrent, setSolvedCurrent] = useState(false);
     const [showHint, setShowHint] = useState(false);
     const [shakeWrong, setShakeWrong] = useState(false);
+    const [starToast, setStarToast] = useState<string | null>(null);
 
     // Màn kết thúc
     const [isFinished, setIsFinished] = useState(false);
@@ -340,23 +350,22 @@ export default function WordPuzzleGameView({
             setTimeLeft((prev) => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    setIsFinished(true);
+                    // Khi hết giờ, tính các câu còn lại là sai/chưa xong
+                    handleTimeOut();
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [loading, isFinished, questions.length]);
+    }, [loading, isFinished, questions.length, currentIndex, correctCount, wrongCount]);
 
-    // Format thời gian hiển thị: 01:29
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    const handleTimeOut = () => {
+        setIsFinished(true);
+        sounds.playVictory();
     };
 
-    // Khởi tạo một câu hỏi
+    // Khởi tạo bàn cờ cho câu hỏi
     const initQuestion = (index: number, q: WordPuzzleQuestionDto) => {
         const { grid: newGrid, path } = generatePuzzleGrid(q.wordAnswer);
         setGrid(newGrid);
@@ -369,14 +378,27 @@ export default function WordPuzzleGameView({
     };
 
     const currentQuestion = questions[currentIndex];
-    const targetWordLength = currentQuestion?.wordAnswer?.length || 5;
+    const targetWordLength = (currentQuestion?.wordAnswer || "").length;
 
-    // Kiểm tra ô liền kề
+    // Toggle âm thanh
+    const toggleSound = () => {
+        sounds.enabled = !soundOn;
+        setSoundOn(!soundOn);
+    };
+
+    // Format thời gian 01:29
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    };
+
+    // Kiểm tra tính liền kề (8 hướng)
     const isAdjacent = (c1: Cell, c2: Cell) => {
         return Math.abs(c1.row - c2.row) <= 1 && Math.abs(c1.col - c2.col) <= 1;
     };
 
-    // Bắt đầu vuốt / chạm
+    // Bắt đầu vuốt từ 1 ô
     const handleCellPointerDown = (cell: Cell) => {
         if (solvedCurrent) return;
         setIsDragging(true);
@@ -426,12 +448,24 @@ export default function WordPuzzleGameView({
         const targetWord = (currentQuestion?.wordAnswer || "").toUpperCase();
 
         if (currentWord === targetWord) {
-            // Đúng đáp án!
+            // ĐÚNG ĐÁP ÁN!
             setSolvedCurrent(true);
             sounds.playCorrect();
 
             const earned = 100;
             setScore((s) => s + earned);
+            setCorrectCount((c) => c + 1);
+
+            // Ghi nhận câu trả lời đúng vào lịch sử màn chơi
+            setHistoryResults((prev) => [
+                ...prev,
+                {
+                    id: currentQuestion.id,
+                    questionText: currentQuestion.questionText || (currentQuestion as unknown as { noiDung?: string })?.noiDung || "",
+                    wordAnswer: currentQuestion.wordAnswer,
+                    isCorrect: true,
+                },
+            ]);
 
             if (onEarnGems) {
                 onEarnGems(10);
@@ -447,7 +481,7 @@ export default function WordPuzzleGameView({
                 }
             }, 1300);
         } else {
-            // Sai từ
+            // SAI TỪ
             sounds.playWrong();
             setShakeWrong(true);
             setTimeout(() => {
@@ -469,27 +503,65 @@ export default function WordPuzzleGameView({
         };
     }, [isDragging, handlePointerUp]);
 
-    // Bấm nút "Gợi ý -30"
+    // Bấm nút "Gợi ý" (Dùng 1 ⭐ tích lũy)
     const handleHint = () => {
         if (solvedCurrent || showHint) return;
-        setScore((s) => Math.max(0, s - 30));
+
+        // Kiểm tra học sinh có đủ sao tích lũy không
+        const currentStars = userStars ?? 0;
+        if (currentStars < 1) {
+            setStarToast("Bạn chưa đủ sao! Hãy hoàn thành thêm bài học để nhận sao tích lũy ⭐");
+            setTimeout(() => setStarToast(null), 3200);
+            return;
+        }
+
+        // Trừ 1 sao
+        if (onUseStars) {
+            const success = onUseStars(1);
+            if (!success) {
+                setStarToast("Bạn chưa đủ sao! Hãy hoàn thành thêm bài học để nhận sao tích lũy ⭐");
+                setTimeout(() => setStarToast(null), 3200);
+                return;
+            }
+        }
+
         setShowHint(true);
+        setStarToast("Đã dùng 1 ⭐ để mở gợi ý câu hỏi!");
+        setTimeout(() => setStarToast(null), 2500);
         sounds.playSelect(4);
     };
 
     // Bấm nút "Bỏ qua →"
     const handleSkip = () => {
+        if (solvedCurrent) return;
+
+        // Tăng số câu sai/bỏ qua
+        setWrongCount((w) => w + 1);
+        setHistoryResults((prev) => [
+            ...prev,
+            {
+                id: currentQuestion.id,
+                questionText: currentQuestion.questionText || (currentQuestion as unknown as { noiDung?: string })?.noiDung || "",
+                wordAnswer: currentQuestion.wordAnswer,
+                isCorrect: false,
+            },
+        ]);
+
         if (currentIndex + 1 < questions.length) {
             initQuestion(currentIndex + 1, questions[currentIndex + 1]);
         } else {
             setIsFinished(true);
+            sounds.playVictory();
         }
     };
 
     // Chơi lại
     const handleRestart = () => {
         setScore(0);
-        setTimeLeft(90);
+        setTimeLeft(120);
+        setCorrectCount(0);
+        setWrongCount(0);
+        setHistoryResults([]);
         setIsFinished(false);
         if (questions.length > 0) {
             initQuestion(0, questions[0]);
@@ -518,7 +590,7 @@ export default function WordPuzzleGameView({
                     </div>
                     <h2 className="text-xl font-black text-slate-800">Chưa có câu hỏi nối chữ</h2>
                     <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                        {error || "Chủ đề này chưa có câu hỏi tự luận với câu trả lời ngắn để tạo ma trận nối chữ."}
+                        {error || "Chủ đề này chưa có câu hỏi tự luận để tạo màn chơi game nối chữ."}
                     </p>
                     <button
                         type="button"
@@ -532,9 +604,20 @@ export default function WordPuzzleGameView({
         );
     }
 
+    const accuracyRate = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+    const finalWrongCount = questions.length - correctCount;
+
     return (
         <div className="relative flex h-full min-h-0 w-full flex-col select-none overflow-y-auto no-scrollbar bg-gradient-to-br from-[#f8eff8] via-[#eef3fb] to-[#eff9f6] text-slate-800 px-4 py-4 md:px-8">
-            {/* 1. TOP HEADER (X, Progress Bar, Timer ⏱, Star ⭐) */}
+            {/* THÔNG BÁO SAO (TOAST) */}
+            {starToast && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-900/90 text-white px-5 py-2.5 text-xs font-bold shadow-xl backdrop-blur-md animate-fade-in flex items-center gap-2">
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400 shrink-0" />
+                    <span>{starToast}</span>
+                </div>
+            )}
+
+            {/* 1. TOP HEADER (X, Progress Bar, Timer ⏱, Stars ⭐, Score) */}
             <header className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 shrink-0 py-2">
                 {/* Close Button X */}
                 <button
@@ -549,14 +632,13 @@ export default function WordPuzzleGameView({
                 {/* Progress Bar in Center */}
                 <div className="flex-1 max-w-xs h-3 bg-white/80 rounded-full overflow-hidden p-0.5 shadow-inner">
                     <div
-                        className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full transition-all duration-300"
+                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300"
                         style={{
-                            width: `${((currentIndex + 1) / questions.length) * 100}%`,
+                            width: `${Math.round(((currentIndex + 1) / questions.length) * 100)}%`,
                         }}
                     />
                 </div>
 
-                {/* Right Badges: Timer and Stars */}
                 <div className="flex items-center gap-2 shrink-0">
                     {/* Timer ⏱ 01:29 */}
                     <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-sm text-xs font-extrabold text-slate-700 border border-slate-100">
@@ -564,11 +646,24 @@ export default function WordPuzzleGameView({
                         <span>{formatTime(timeLeft)}</span>
                     </div>
 
-                    {/* Star Badge ⭐ 0 */}
-                    <div className="flex items-center gap-1.5 rounded-full bg-[#fde047] px-3.5 py-1.5 shadow-sm text-xs font-black text-slate-900 border border-yellow-300">
-                        <Star className="h-4 w-4 fill-amber-500 text-amber-600" />
-                        <span>{score}</span>
+                    {/* Số sao tích điểm của học sinh ⭐ */}
+                    <div 
+                        className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 shadow-sm text-xs font-black text-amber-700 border border-amber-200"
+                        title="Số sao tích điểm của bạn (học xong bài để nhận thêm, dùng 1 ⭐ cho mỗi gợi ý)"
+                    >
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
+                        <span>{userStars}</span>
                     </div>
+
+                    {/* Mute/Unmute */}
+                    <button
+                        type="button"
+                        onClick={toggleSound}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm text-slate-500 hover:text-slate-800 transition"
+                        title={soundOn ? "Tắt âm" : "Bật âm"}
+                    >
+                        {soundOn ? <Volume2 className="h-4 w-4 text-emerald-600" /> : <VolumeX className="h-4 w-4 text-slate-400" />}
+                    </button>
                 </div>
             </header>
 
@@ -639,29 +734,24 @@ export default function WordPuzzleGameView({
                             {grid.map((row) =>
                                 row.map((cell) => {
                                     const isSelected = selectedCells.some((c) => c.id === cell.id);
-                                    const isHinted = showHint && cell.isTarget;
+                                    const isHinted =
+                                        showHint &&
+                                        targetPath.slice(0, 2).some(([r, c]) => r === cell.row && c === cell.col);
 
                                     return (
                                         <div
                                             key={cell.id}
                                             onPointerDown={() => handleCellPointerDown(cell)}
                                             onPointerEnter={() => handleCellPointerEnter(cell)}
-                                            className={`relative flex h-14 w-14 md:h-16 md:w-16 cursor-pointer items-center justify-center rounded-2xl text-xl md:text-2xl font-black transition-all duration-150 select-none shadow-xs active:scale-95 ${
+                                            className={`relative flex h-14 w-14 sm:h-16 sm:w-16 cursor-pointer items-center justify-center rounded-2xl text-2xl sm:text-3xl font-black transition-all duration-150 select-none shadow-xs ${
                                                 isSelected
-                                                    ? "bg-purple-600 text-white scale-105 shadow-md shadow-purple-300 border-2 border-purple-300 z-10"
+                                                    ? "bg-[#a855f7] text-white scale-105 shadow-md shadow-purple-300 ring-2 ring-purple-400"
                                                     : isHinted
-                                                    ? "bg-yellow-300 text-slate-900 border-2 border-yellow-500 scale-105 animate-pulse shadow-md"
-                                                    : `${cell.colorClass} hover:opacity-90`
+                                                    ? "bg-amber-300 text-amber-950 animate-pulse scale-105 ring-2 ring-amber-400 shadow-md"
+                                                    : `${cell.colorClass} hover:brightness-95 active:scale-95`
                                             }`}
                                         >
                                             {cell.letter}
-
-                                            {/* Hint number indicator */}
-                                            {isHinted && cell.targetIndex !== undefined && (
-                                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[9px] font-black text-white">
-                                                    {cell.targetIndex + 1}
-                                                </span>
-                                            )}
                                         </div>
                                     );
                                 }),
@@ -670,20 +760,21 @@ export default function WordPuzzleGameView({
                     </div>
                 </div>
 
-                {/* 4. BOTTOM ACTION BUTTONS: "💡 Gợi ý -30" & "Bỏ qua →" */}
-                <div className="mt-2 flex items-center justify-center gap-3">
-                    {/* Nút Gợi ý -30 */}
+                {/* 4. ACTIONS: GỢI Ý (⭐ 1) & BỎ QUA */}
+                <div className="mt-2 flex items-center justify-center gap-4">
+                    {/* Nút Gợi ý (tốn 1 sao tích lũy) */}
                     <button
                         type="button"
                         onClick={handleHint}
-                        disabled={showHint || solvedCurrent}
-                        className="inline-flex items-center gap-2 rounded-full bg-[#fde047] hover:bg-yellow-300 disabled:opacity-40 disabled:pointer-events-none px-6 py-2.5 text-xs md:text-sm font-black text-slate-900 shadow-sm transition active:scale-95 border border-yellow-300"
+                        disabled={solvedCurrent || showHint}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white hover:bg-amber-50 disabled:opacity-40 disabled:pointer-events-none px-6 py-2.5 text-xs md:text-sm font-black text-amber-700 shadow-sm transition active:scale-95 border border-amber-200"
+                        title="Dùng 1 sao tích điểm để mở gợi ý"
                     >
-                        <Lightbulb className="h-4 w-4 text-amber-700" />
-                        Gợi ý -30
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
+                        Gợi ý (1 ⭐)
                     </button>
 
-                    {/* Nút Bỏ qua → */}
+                    {/* Nút Bỏ qua câu hỏi */}
                     <button
                         type="button"
                         onClick={handleSkip}
@@ -694,42 +785,81 @@ export default function WordPuzzleGameView({
                     </button>
                 </div>
 
-                {/* Dòng chú thích dưới cùng */}
                 <p className="mt-3 text-center text-xs font-semibold text-slate-400">
-                    Khó quá? Bấm &quot;Gợi ý&quot; để thấy đường đi của đáp án.
+                    Khó quá? Dùng sao tích lũy để bấm &quot;Gợi ý&quot; xem đường đi của đáp án.
                 </p>
             </main>
 
-            {/* 5. VICTORY / END MODAL */}
+            {/* 5. VICTORY / END MODAL - BẢNG KẾT QUẢ ĐÚNG / SAI CHÍNH XÁC */}
             {isFinished && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in">
-                    <div className="relative w-full max-w-sm rounded-[32px] bg-white p-6 md:p-8 text-center shadow-2xl border border-purple-100">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
+                    <div className="relative w-full max-w-md rounded-[32px] bg-white p-6 md:p-8 text-center shadow-2xl border border-purple-100 my-auto">
                         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 shadow-md mb-4 animate-bounce">
                             <Trophy className="h-10 w-10 text-amber-800" />
                         </div>
 
                         <span className="rounded-full bg-purple-100 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-purple-700">
-                            Hoàn Thành Màn Chơi!
+                            Kết Quả Màn Chơi
                         </span>
 
                         <h2 className="mt-2 text-2xl font-black text-slate-900">
-                            Chúc Mừng Bạn!
+                            {correctCount === questions.length ? "Xuất Sắc! Hoàn Hảo!" : "Hoàn Thành Màn Chơi!"}
                         </h2>
 
-                        <p className="mt-2 text-xs md:text-sm text-slate-500">
-                            Bạn đã hoàn thành các câu hỏi nối từ của chủ đề <strong className="text-purple-700">{topic.name}</strong>!
+                        <p className="mt-1 text-xs text-slate-500">
+                            Chủ đề: <strong className="text-purple-700">{topic.name}</strong>
                         </p>
 
-                        <div className="my-5 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                            <div>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase">Tổng điểm</p>
-                                <p className="text-2xl font-black text-amber-600">⭐ {score}</p>
+                        {/* BẢNG THỐNG KÊ SỐ LƯỢNG ĐÚNG, SAI CHÍNH XÁC */}
+                        <div className="my-5 grid grid-cols-3 gap-2.5 rounded-2xl bg-slate-50 border border-slate-100 p-3.5">
+                            {/* Câu đúng */}
+                            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2 text-center">
+                                <p className="text-[10px] font-bold text-emerald-600 uppercase">Đúng</p>
+                                <p className="text-xl font-black text-emerald-700 flex items-center justify-center gap-1 mt-0.5">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    {correctCount}
+                                </p>
                             </div>
-                            <div>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase">Câu hỏi</p>
-                                <p className="text-2xl font-black text-purple-600">{questions.length} / {questions.length}</p>
+
+                            {/* Câu sai / bỏ qua */}
+                            <div className="rounded-xl bg-rose-50 border border-rose-200 p-2 text-center">
+                                <p className="text-[10px] font-bold text-rose-600 uppercase">Sai / Bỏ qua</p>
+                                <p className="text-xl font-black text-rose-700 flex items-center justify-center gap-1 mt-0.5">
+                                    <XCircle className="h-4 w-4" />
+                                    {finalWrongCount}
+                                </p>
+                            </div>
+
+                            {/* Tỉ lệ chính xác */}
+                            <div className="rounded-xl bg-purple-50 border border-purple-200 p-2 text-center">
+                                <p className="text-[10px] font-bold text-purple-600 uppercase">Chính xác</p>
+                                <p className="text-xl font-black text-purple-700 mt-0.5">
+                                    {accuracyRate}%
+                                </p>
                             </div>
                         </div>
+
+                        {/* Danh sách câu hỏi chi tiết */}
+                        {historyResults.length > 0 && (
+                            <div className="mb-5 max-h-40 overflow-y-auto rounded-2xl bg-slate-50 border border-slate-100 p-3 text-left space-y-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Chi tiết câu hỏi</p>
+                                {historyResults.map((item, idx) => (
+                                    <div key={idx} className="flex items-center justify-between text-xs gap-2 py-1 border-b border-slate-200/60 last:border-0">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            {item.isCorrect ? (
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                                            ) : (
+                                                <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                                            )}
+                                            <span className="truncate text-slate-700 font-medium">Câu {idx + 1}: {item.questionText}</span>
+                                        </div>
+                                        <span className={`font-black uppercase shrink-0 ${item.isCorrect ? "text-emerald-600" : "text-rose-500"}`}>
+                                            {item.wordAnswer}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="flex flex-col gap-2.5">
                             <button

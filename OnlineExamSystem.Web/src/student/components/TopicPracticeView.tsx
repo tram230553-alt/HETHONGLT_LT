@@ -27,12 +27,14 @@ interface TopicPracticeViewProps {
     topic: TopicDto;
     onBack: () => void;
     onStartWordGame?: () => void;
+    onEarnStars?: (amount: number) => void;
 }
 
 export default function TopicPracticeView({
     topic,
     onBack,
     onStartWordGame,
+    onEarnStars,
 }: TopicPracticeViewProps) {
     const [questions, setQuestions] =
         React.useState<PracticeQuestionDto[]>([]);
@@ -49,6 +51,7 @@ export default function TopicPracticeView({
     const [showExitConfirm, setShowExitConfirm] = React.useState(false);
     const [completedAttemptId, setCompletedAttemptId] =
         React.useState<string | null>(null);
+    const [lastEarnedStars, setLastEarnedStars] = React.useState<number | null>(null);
 
     const [flaggedQuestions, setFlaggedQuestions] = React.useState<
         Set<string>
@@ -162,6 +165,16 @@ export default function TopicPracticeView({
                 requestAnswers,
             );
 
+            // Tích điểm sao thưởng sau khi hoàn thành bài học
+            const score = response.score ?? 0;
+            let earned = 3; // Hoàn thành bài học được thưởng 3 sao
+            if (score >= 8) earned += 2; // Điểm giỏi cộng thêm 2 sao
+            if (score >= 10) earned += 1; // Điểm 10 cộng thêm 1 sao
+            setLastEarnedStars(earned);
+            if (onEarnStars) {
+                onEarnStars(earned);
+            }
+
             setShowSubmitConfirm(false);
             setCompletedAttemptId(response.attemptId);
         } catch (err) {
@@ -219,6 +232,7 @@ export default function TopicPracticeView({
                     onBack={onBack}
                     onRetry={handleRetry}
                     onStartWordGame={onStartWordGame}
+                    earnedStars={lastEarnedStars}
                 />
             </div>
         );

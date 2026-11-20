@@ -70,6 +70,7 @@ export interface UserStats {
   targetScore: number; // Điểm mong muốn (e.g. 27 điểm)
   currentStreak: number; // Chuỗi ngày học liên tục (Streak)
   gems: number; // Điểm kinh nghiệm tích lũy (phong cách Duolingo)
+  stars: number; // ⭐ Số sao tích điểm học bài, dùng làm gợi ý trong minigame
   dailyGoalMinutes: number;
   todayMinutesStudied: number;
   subjectProgress: Record<SubjectId, number>; // Phần trăm tiến độ của từng môn
