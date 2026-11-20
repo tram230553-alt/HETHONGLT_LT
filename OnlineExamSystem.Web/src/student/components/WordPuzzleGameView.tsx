@@ -1,20 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-    ArrowLeft,
-    Sparkles,
-    Trophy,
+    X,
+    Clock,
+    Star,
+    Lightbulb,
+    ArrowRight,
     RotateCcw,
-    HelpCircle,
+    Trophy,
+    CheckCircle2,
     Volume2,
     VolumeX,
-    Shuffle,
-    ChevronRight,
-    CheckCircle2,
-    Lightbulb,
-    Award,
-    Gamepad2,
+    Sparkles,
     AlertCircle,
-    PartyPopper,
 } from "lucide-react";
 import type { TopicDto } from "../../services/topicService";
 import {
@@ -33,7 +30,7 @@ interface WordPuzzleGameViewProps {
 }
 
 /* =========================================================
-   GRID CELL TYPE
+   CELL INTERFACE
 ========================================================= */
 
 interface Cell {
@@ -41,12 +38,26 @@ interface Cell {
     row: number;
     col: number;
     letter: string;
-    points: number;
-    isTargetWord?: boolean;
+    colorClass: string;
+    isTarget?: boolean;
+    targetIndex?: number;
 }
 
 /* =========================================================
-   SOUND SYNTHESIZER (WEB AUDIO API)
+   PASTEL COLOR PALETTE (From exact image)
+========================================================= */
+
+const PASTEL_COLORS = [
+    "bg-[#fed7db] text-[#543b43]", // Pink pastel
+    "bg-[#dbeefd] text-[#2c4769]", // Blue pastel
+    "bg-[#fef4b8] text-[#5c522b]", // Yellow pastel
+    "bg-[#d5f7dc] text-[#285737]", // Green pastel
+    "bg-[#fee0c4] text-[#634224]", // Orange pastel
+    "bg-[#eedeff] text-[#4d3370]", // Purple pastel
+];
+
+/* =========================================================
+   WEB AUDIO API SOUND GENERATOR
 ========================================================= */
 
 class SoundEffects {
@@ -73,15 +84,14 @@ class SoundEffects {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = "sine";
-        // Tần số tăng dần khi nối được nhiều chữ liên tiếp
-        const baseFreq = 340;
-        osc.frequency.setValueAtTime(baseFreq * Math.pow(1.08, Math.min(step, 12)), ctx.currentTime);
+        const baseFreq = 400;
+        osc.frequency.setValueAtTime(baseFreq * Math.pow(1.08, Math.min(step, 10)), ctx.currentTime);
         gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
-        osc.stop(ctx.currentTime + 0.12);
+        osc.stop(ctx.currentTime + 0.1);
     }
 
     playCorrect() {
@@ -93,7 +103,7 @@ class SoundEffects {
             const gain = ctx.createGain();
             osc.type = "triangle";
             osc.frequency.setValueAtTime(f, ctx.currentTime + idx * 0.08);
-            gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.08);
+            gain.gain.setValueAtTime(0.18, ctx.currentTime + idx * 0.08);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.25);
             osc.connect(gain);
             gain.connect(ctx.destination);
@@ -108,8 +118,8 @@ class SoundEffects {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(180, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.25);
+        osc.frequency.setValueAtTime(190, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.25);
         gain.gain.setValueAtTime(0.15, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
         osc.connect(gain);
@@ -140,26 +150,7 @@ class SoundEffects {
 const sounds = new SoundEffects();
 
 /* =========================================================
-   LETTER POINTS (Scrabble style point system)
-========================================================= */
-
-const LETTER_POINTS: Record<string, number> = {
-    A: 1, E: 1, I: 1, O: 1, U: 1, L: 1, N: 1, S: 1, T: 1, R: 1,
-    D: 2, G: 2,
-    B: 3, C: 3, M: 3, P: 3,
-    F: 4, H: 4, V: 4, W: 4, Y: 4,
-    K: 5,
-    J: 8, X: 8,
-    Q: 10, Z: 10,
-};
-
-function getLetterPoint(char: string): number {
-    const upper = char.toUpperCase();
-    return LETTER_POINTS[upper] || 1;
-}
-
-/* =========================================================
-   GRID GENERATOR (AlphaBetty Saga style 8-direction path)
+   GRID GENERATOR (4x4 or 5x5 based on word length)
 ========================================================= */
 
 const DIRECTIONS = [
@@ -169,18 +160,16 @@ const DIRECTIONS = [
 
 const FILLER_POOL = "AABCDEEEGHIKLMNNNOOPPQRSTTUUVXY";
 
-function generatePuzzleGrid(word: string, targetSize?: number): { grid: Cell[][]; path: [number, number][] } {
+function generatePuzzleGrid(word: string): { grid: Cell[][]; path: [number, number][] } {
     const cleanedWord = (word || "").toUpperCase().replace(/[^A-Z0-9À-Ỹ]/g, "");
     const wordLen = cleanedWord.length || 3;
-    const size = targetSize || (wordLen > 8 ? 6 : 5);
+    const size = wordLen > 8 ? 5 : 4; // Bảng 4x4 theo mẫu nếu từ <= 8 ký tự
 
-    // Thử tạo đường đi cho từ
-    for (let attempt = 0; attempt < 100; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
         const matrix: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
         const visited = new Set<string>();
         const path: [number, number][] = [];
 
-        // Bắt đầu từ 1 ô ngẫu nhiên
         const startR = Math.floor(Math.random() * size);
         const startC = Math.floor(Math.random() * size);
 
@@ -192,7 +181,6 @@ function generatePuzzleGrid(word: string, targetSize?: number): { grid: Cell[][]
 
         let success = true;
         for (let i = 1; i < wordLen; i++) {
-            // Lấy các hướng hợp lệ chưa thăm
             const shuffledDirs = [...DIRECTIONS].sort(() => Math.random() - 0.5);
             let nextR = -1;
             let nextC = -1;
@@ -220,26 +208,35 @@ function generatePuzzleGrid(word: string, targetSize?: number): { grid: Cell[][]
         }
 
         if (success) {
-            // Lấp đầy các ô còn lại
-            const targetSet = new Set(path.map(([r, c]) => `${r},${c}`));
+            const targetMap = new Map<string, number>();
+            path.forEach(([r, c], idx) => targetMap.set(`${r},${c}`, idx));
+
             const grid: Cell[][] = [];
+            let colorIdx = Math.floor(Math.random() * PASTEL_COLORS.length);
 
             for (let r = 0; r < size; r++) {
                 const rowCells: Cell[] = [];
                 for (let c = 0; c < size; c++) {
-                    const isTarget = targetSet.has(`${r},${c}`);
+                    const key = `${r},${c}`;
+                    const isTarget = targetMap.has(key);
+                    const targetIndex = targetMap.get(key);
+
                     let char = matrix[r][c];
                     if (!char) {
-                        // Lấy ngẫu nhiên từ filler pool
                         char = FILLER_POOL[Math.floor(Math.random() * FILLER_POOL.length)];
                     }
+
+                    // Phân bổ màu pastel xen kẽ đẹp mắt
+                    const color = PASTEL_COLORS[(colorIdx + r * size + c) % PASTEL_COLORS.length];
+
                     rowCells.push({
                         id: `cell-${r}-${c}`,
                         row: r,
                         col: c,
                         letter: char,
-                        points: getLetterPoint(char),
-                        isTargetWord: isTarget,
+                        colorClass: color,
+                        isTarget,
+                        targetIndex,
                     });
                 }
                 grid.push(rowCells);
@@ -249,9 +246,10 @@ function generatePuzzleGrid(word: string, targetSize?: number): { grid: Cell[][]
         }
     }
 
-    // Fallback nếu không xếp được (rất hiếm): xếp thẳng hàng
+    // Fallback nếu không tìm thấy đường uốn lượn:
     const grid: Cell[][] = [];
     const path: [number, number][] = [];
+    let colorIdx = 0;
     for (let r = 0; r < size; r++) {
         const rowCells: Cell[] = [];
         for (let c = 0; c < size; c++) {
@@ -264,8 +262,9 @@ function generatePuzzleGrid(word: string, targetSize?: number): { grid: Cell[][]
                 row: r,
                 col: c,
                 letter: char,
-                points: getLetterPoint(char),
-                isTargetWord: isTarget,
+                colorClass: PASTEL_COLORS[(colorIdx++) % PASTEL_COLORS.length],
+                isTarget,
+                targetIndex: isTarget ? idx : undefined,
             });
         }
         grid.push(rowCells);
@@ -289,25 +288,24 @@ export default function WordPuzzleGameView({
     // Trạng thái chơi
     const [currentIndex, setCurrentIndex] = useState(0);
     const [score, setScore] = useState(0);
-    const [streak, setStreak] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(90); // 1:30
     const [soundOn, setSoundOn] = useState(true);
 
-    // Lưới & đường đi
+    // Grid và lựa chọn
     const [grid, setGrid] = useState<Cell[][]>([]);
     const [targetPath, setTargetPath] = useState<[number, number][]>([]);
     const [selectedCells, setSelectedCells] = useState<Cell[]>([]);
     const [isDragging, setIsDragging] = useState(false);
 
-    // Trạng thái câu hiện tại
+    // Hiệu ứng trạng thái
     const [solvedCurrent, setSolvedCurrent] = useState(false);
     const [showHint, setShowHint] = useState(false);
     const [shakeWrong, setShakeWrong] = useState(false);
-    const [plusScoreAnim, setPlusScoreAnim] = useState<number | null>(null);
 
-    // Kết thúc vòng
+    // Màn kết thúc
     const [isFinished, setIsFinished] = useState(false);
 
-    // Load danh sách câu hỏi
+    // Tải câu hỏi từ Backend
     useEffect(() => {
         let mounted = true;
         const load = async () => {
@@ -323,7 +321,7 @@ export default function WordPuzzleGameView({
                 }
             } catch (err) {
                 if (mounted) {
-                    setError(err instanceof Error ? err.message : "Không thể tải câu hỏi nối từ.");
+                    setError(err instanceof Error ? err.message : "Không thể tải câu hỏi.");
                 }
             } finally {
                 if (mounted) setLoading(false);
@@ -335,7 +333,30 @@ export default function WordPuzzleGameView({
         };
     }, [topic.id]);
 
-    // Khởi tạo bàn cờ cho câu hỏi
+    // Đồng hồ đếm ngược
+    useEffect(() => {
+        if (loading || isFinished || questions.length === 0) return;
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    setIsFinished(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [loading, isFinished, questions.length]);
+
+    // Format thời gian hiển thị: 01:29
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    };
+
+    // Khởi tạo một câu hỏi
     const initQuestion = (index: number, q: WordPuzzleQuestionDto) => {
         const { grid: newGrid, path } = generatePuzzleGrid(q.wordAnswer);
         setGrid(newGrid);
@@ -348,19 +369,14 @@ export default function WordPuzzleGameView({
     };
 
     const currentQuestion = questions[currentIndex];
+    const targetWordLength = currentQuestion?.wordAnswer?.length || 5;
 
-    // Toggle âm thanh
-    const toggleSound = () => {
-        sounds.enabled = !soundOn;
-        setSoundOn(!soundOn);
-    };
-
-    // Kiểm tra tính liền kề (8 hướng)
+    // Kiểm tra ô liền kề
     const isAdjacent = (c1: Cell, c2: Cell) => {
         return Math.abs(c1.row - c2.row) <= 1 && Math.abs(c1.col - c2.col) <= 1;
     };
 
-    // Bắt đầu chọn ô
+    // Bắt đầu vuốt / chạm
     const handleCellPointerDown = (cell: Cell) => {
         if (solvedCurrent) return;
         setIsDragging(true);
@@ -368,28 +384,28 @@ export default function WordPuzzleGameView({
         sounds.playSelect(0);
     };
 
-    // Di chuyển qua các ô liền kề
+    // Di chuyển qua ô kế tiếp
     const handleCellPointerEnter = (cell: Cell) => {
         if (!isDragging || solvedCurrent) return;
 
-        // Nếu ô này đã là ô cuối cùng thì bỏ qua
+        // Nếu ô trùng với ô cuối cùng
         if (selectedCells.length > 0 && selectedCells[selectedCells.length - 1].id === cell.id) {
             return;
         }
 
-        // Nếu người chơi quay lui (chạm lại ô áp chót), cho phép undo ô cuối
+        // Quay lui (undo ô trước)
         if (selectedCells.length >= 2 && selectedCells[selectedCells.length - 2].id === cell.id) {
             setSelectedCells((prev) => prev.slice(0, prev.length - 1));
             sounds.playSelect(selectedCells.length - 2);
             return;
         }
 
-        // Kiểm tra xem ô đã có trong danh sách chọn chưa (tránh chu trình)
+        // Tránh chọn lại ô đã có
         if (selectedCells.some((c) => c.id === cell.id)) {
             return;
         }
 
-        // Kiểm tra xem có liền kề với ô cuối cùng không
+        // Kiểm tra liền kề
         const lastCell = selectedCells[selectedCells.length - 1];
         if (lastCell && isAdjacent(lastCell, cell)) {
             const nextList = [...selectedCells, cell];
@@ -398,7 +414,7 @@ export default function WordPuzzleGameView({
         }
     };
 
-    // Kết thúc việc kéo/nối ô
+    // Kết thúc vuốt
     const handlePointerUp = useCallback(() => {
         if (!isDragging || solvedCurrent || selectedCells.length === 0) {
             setIsDragging(false);
@@ -414,42 +430,33 @@ export default function WordPuzzleGameView({
             setSolvedCurrent(true);
             sounds.playCorrect();
 
-            const earned = 500 + streak * 50;
+            const earned = 100;
             setScore((s) => s + earned);
-            setStreak((st) => st + 1);
-            setPlusScoreAnim(earned);
 
             if (onEarnGems) {
                 onEarnGems(10);
             }
 
-            setTimeout(() => {
-                setPlusScoreAnim(null);
-            }, 1200);
-
-            // Tự động chuyển câu tiếp theo sau 1.6 giây
+            // Tự động chuyển câu tiếp theo sau 1.3 giây
             setTimeout(() => {
                 if (currentIndex + 1 < questions.length) {
                     initQuestion(currentIndex + 1, questions[currentIndex + 1]);
                 } else {
-                    // Đã hoàn thành tất cả câu!
                     setIsFinished(true);
                     sounds.playVictory();
                 }
-            }, 1600);
+            }, 1300);
         } else {
-            // Sai từ khóa
+            // Sai từ
             sounds.playWrong();
-            setStreak(0);
             setShakeWrong(true);
             setTimeout(() => {
                 setShakeWrong(false);
                 setSelectedCells([]);
-            }, 450);
+            }, 400);
         }
-    }, [isDragging, solvedCurrent, selectedCells, currentQuestion, streak, onEarnGems, currentIndex, questions]);
+    }, [isDragging, solvedCurrent, selectedCells, currentQuestion, onEarnGems, currentIndex, questions]);
 
-    // Lắng nghe sự kiện thả chuột trên toàn window
     useEffect(() => {
         const onGlobalPointerUp = () => {
             if (isDragging) {
@@ -462,23 +469,27 @@ export default function WordPuzzleGameView({
         };
     }, [isDragging, handlePointerUp]);
 
-    // Xáo lại bảng (Shuffle)
-    const handleShuffle = () => {
-        if (currentQuestion && !solvedCurrent) {
-            initQuestion(currentIndex, currentQuestion);
-        }
-    };
-
-    // Bật gợi ý (Hint): làm sáng 2 ô đầu tiên của đường đi đáp án
+    // Bấm nút "Gợi ý -30"
     const handleHint = () => {
+        if (solvedCurrent || showHint) return;
+        setScore((s) => Math.max(0, s - 30));
         setShowHint(true);
         sounds.playSelect(4);
     };
 
-    // Chơi lại toàn bộ
+    // Bấm nút "Bỏ qua →"
+    const handleSkip = () => {
+        if (currentIndex + 1 < questions.length) {
+            initQuestion(currentIndex + 1, questions[currentIndex + 1]);
+        } else {
+            setIsFinished(true);
+        }
+    };
+
+    // Chơi lại
     const handleRestart = () => {
         setScore(0);
-        setStreak(0);
+        setTimeLeft(90);
         setIsFinished(false);
         if (questions.length > 0) {
             initQuestion(0, questions[0]);
@@ -488,317 +499,251 @@ export default function WordPuzzleGameView({
     // Loading State
     if (loading) {
         return (
-            <div className="flex h-full min-h-0 items-center justify-center bg-slate-900 p-4">
-                <div className="flex flex-col items-center gap-4 text-center">
-                    <div className="relative">
-                        <div className="h-16 w-16 animate-spin rounded-full border-4 border-amber-400 border-t-transparent" />
-                        <Gamepad2 className="absolute inset-0 m-auto h-7 w-7 text-amber-300 animate-pulse" />
-                    </div>
-                    <p className="font-extrabold text-amber-100 text-lg">Đang tạo màn chơi Game Nối Chữ...</p>
-                    <p className="text-xs text-amber-200/70">Lấy câu hỏi tự luận & tạo ma trận từ ngữ AlphaBetty</p>
+            <div className="flex h-full min-h-0 items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-6">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
+                    <p className="font-extrabold text-slate-700">Đang chuẩn bị màn chơi...</p>
                 </div>
             </div>
         );
     }
 
-    // Error or No Questions State
+    // Error / No Questions
     if (error || questions.length === 0) {
         return (
-            <div className="flex h-full min-h-0 flex-col items-center justify-center bg-slate-900 p-6 text-white">
-                <div className="max-w-md w-full rounded-3xl bg-slate-800/90 border border-slate-700 p-8 text-center shadow-2xl backdrop-blur">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 mb-4">
-                        <AlertCircle className="h-9 w-9" />
+            <div className="flex h-full min-h-0 flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-6">
+                <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-lg border border-purple-100">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 mb-4">
+                        <AlertCircle className="h-8 w-8" />
                     </div>
-                    <h2 className="text-xl font-black text-amber-300">Chưa có câu hỏi nối chữ</h2>
-                    <p className="mt-3 text-sm text-slate-300 leading-relaxed">
-                        {error ||
-                            "Chủ đề này chưa có câu hỏi tự luận với câu trả lời ngắn để tạo trò chơi nối chữ. Bạn hãy luyện tập trắc nghiệm thông thường hoặc thêm câu hỏi tự luận mới!"}
+                    <h2 className="text-xl font-black text-slate-800">Chưa có câu hỏi nối chữ</h2>
+                    <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                        {error || "Chủ đề này chưa có câu hỏi tự luận với câu trả lời ngắn để tạo ma trận nối chữ."}
                     </p>
                     <button
                         type="button"
                         onClick={onBack}
-                        className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-6 py-3 transition shadow-lg active:scale-95"
+                        className="mt-6 inline-flex items-center gap-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-black px-6 py-3 transition shadow-md active:scale-95 text-sm"
                     >
-                        <ArrowLeft className="h-5 w-5" />
-                        Quay lại danh sách chủ đề
+                        Quay lại chủ đề
                     </button>
                 </div>
             </div>
         );
     }
 
-    // Current word being formed
-    const currentSpelled = selectedCells.map((c) => c.letter).join("");
-
     return (
-        <div className="relative flex h-full min-h-0 w-full flex-col select-none overflow-hidden bg-gradient-to-b from-[#1b1e36] via-[#161a2e] to-[#0f111e] text-white">
-            {/* AMBIENT LIGHTING BACKGROUND */}
-            <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-amber-500/15 blur-[120px]" />
-            <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-emerald-500/10 blur-[100px]" />
+        <div className="relative flex h-full min-h-0 w-full flex-col select-none overflow-y-auto no-scrollbar bg-gradient-to-br from-[#f8eff8] via-[#eef3fb] to-[#eff9f6] text-slate-800 px-4 py-4 md:px-8">
+            {/* 1. TOP HEADER (X, Progress Bar, Timer ⏱, Star ⭐) */}
+            <header className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 shrink-0 py-2">
+                {/* Close Button X */}
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm hover:bg-slate-50 transition active:scale-95 text-slate-500 hover:text-slate-700"
+                    title="Đóng game"
+                >
+                    <X className="h-5 w-5" />
+                </button>
 
-            {/* TOP HEADER / BAR */}
-            <header className="relative z-20 flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4 md:px-8 bg-slate-950/40 backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={onBack}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition active:scale-95"
-                        title="Quay lại"
-                    >
-                        <ArrowLeft className="h-5 w-5" />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-300">
-                                AlphaBetty Saga
-                            </span>
-                            <span className="text-xs font-semibold text-slate-400 truncate max-w-[140px] md:max-w-[220px]">
-                                {topic.name}
-                            </span>
-                        </div>
-                        <h1 className="text-sm md:text-base font-black text-amber-100 flex items-center gap-1.5">
-                            <Gamepad2 className="h-4 w-4 text-amber-400" />
-                            Game Nối Chữ Ôn Tập
-                        </h1>
-                    </div>
+                {/* Progress Bar in Center */}
+                <div className="flex-1 max-w-xs h-3 bg-white/80 rounded-full overflow-hidden p-0.5 shadow-inner">
+                    <div
+                        className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full transition-all duration-300"
+                        style={{
+                            width: `${((currentIndex + 1) / questions.length) * 100}%`,
+                        }}
+                    />
                 </div>
 
-                {/* SCORES & STATS */}
-                <div className="flex items-center gap-2 md:gap-4">
-                    {/* Cheese / Progress count */}
-                    <div className="flex items-center gap-2 rounded-2xl bg-amber-500/20 border border-amber-400/30 px-3 py-1.5 shadow-inner">
-                        <span className="text-lg">🧀</span>
-                        <div className="text-left">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/80">Tiến trình</p>
-                            <p className="text-xs md:text-sm font-black text-amber-200">
-                                {currentIndex + 1} / {questions.length}
-                            </p>
-                        </div>
+                {/* Right Badges: Timer and Stars */}
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Timer ⏱ 01:29 */}
+                    <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-sm text-xs font-extrabold text-slate-700 border border-slate-100">
+                        <Clock className="h-3.5 w-3.5 text-slate-500" />
+                        <span>{formatTime(timeLeft)}</span>
                     </div>
 
-                    {/* Total Score */}
-                    <div className="relative flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-600 to-yellow-500 px-3.5 py-1.5 shadow-md">
-                        <Trophy className="h-4 w-4 text-amber-100" />
-                        <div>
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-amber-100/90">Điểm</p>
-                            <p className="text-xs md:text-sm font-black text-white">{score}</p>
-                        </div>
-
-                        {/* Floating +500 Animation */}
-                        {plusScoreAnim && (
-                            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 animate-bounce rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-black text-white shadow-lg">
-                                +{plusScoreAnim}
-                            </span>
-                        )}
+                    {/* Star Badge ⭐ 0 */}
+                    <div className="flex items-center gap-1.5 rounded-full bg-[#fde047] px-3.5 py-1.5 shadow-sm text-xs font-black text-slate-900 border border-yellow-300">
+                        <Star className="h-4 w-4 fill-amber-500 text-amber-600" />
+                        <span>{score}</span>
                     </div>
-
-                    {/* Mute / Unmute */}
-                    <button
-                        type="button"
-                        onClick={toggleSound}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition"
-                        title={soundOn ? "Tắt âm" : "Bật âm"}
-                    >
-                        {soundOn ? <Volume2 className="h-5 w-5 text-emerald-400" /> : <VolumeX className="h-5 w-5 text-slate-400" />}
-                    </button>
                 </div>
             </header>
 
-            {/* MAIN PLAYING WORKSPACE */}
-            <main className="relative z-10 flex flex-1 flex-col items-center justify-between p-3 md:p-6 overflow-y-auto no-scrollbar">
-                {/* 1. QUESTION BANNER CARD */}
-                <div className="w-full max-w-xl rounded-3xl bg-gradient-to-b from-slate-800/90 to-slate-900/90 border border-amber-500/20 p-4 md:p-5 shadow-2xl backdrop-blur-md">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-300">
-                            <Sparkles className="h-3.5 w-3.5" />
-                            Câu hỏi {currentIndex + 1}
-                        </span>
-                        <span className="text-xs font-bold text-slate-400">
-                            Đáp án: {currentQuestion?.wordAnswer?.length || 0} chữ cái
-                        </span>
+            {/* 2. MAIN CARD: QUESTION & WORD ANSWER SLOTS */}
+            <main className="my-auto mx-auto flex w-full max-w-lg flex-col items-center py-2">
+                {/* QUESTION CARD */}
+                <div className="w-full rounded-[28px] bg-white p-5 md:p-6 shadow-sm border border-slate-100/80 text-center">
+                    {/* Badge "CÂU 1 / 6" */}
+                    <div className="inline-block rounded-full bg-purple-100/80 px-4 py-1 text-xs font-black uppercase tracking-wider text-purple-700 mb-3">
+                        CÂU {currentIndex + 1} / {questions.length}
                     </div>
 
-                    <p className="text-sm md:text-base font-bold text-slate-100 leading-snug">
+                    {/* Tiêu đề câu hỏi */}
+                    <h2 className="text-base md:text-lg font-black text-slate-800 leading-snug px-2">
                         {currentQuestion?.questionText}
+                    </h2>
+
+                    {/* HÀNG CÁC Ô CHỮ NÉT ĐỨT (Dashed Letter Slots) */}
+                    <div className="mt-5 flex items-center justify-center gap-2 flex-wrap min-h-[46px]">
+                        {Array.from({ length: targetWordLength }).map((_, idx) => {
+                            const filledLetter = selectedCells[idx]?.letter;
+                            const isCorrectState = solvedCurrent;
+
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`flex h-11 w-11 md:h-12 md:w-12 items-center justify-center rounded-xl text-lg md:text-xl font-black transition-all duration-200 select-none ${
+                                        filledLetter
+                                            ? isCorrectState
+                                                ? "border-2 border-emerald-500 bg-emerald-50 text-emerald-700 scale-105 shadow-sm"
+                                                : "border-2 border-purple-500 bg-purple-50 text-purple-700 scale-105 shadow-sm"
+                                            : "border-2 border-dashed border-slate-300 bg-transparent text-transparent"
+                                    }`}
+                                >
+                                    {filledLetter || ""}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Hướng dẫn nhỏ */}
+                    <p className="mt-3 text-[11px] md:text-xs font-medium text-slate-400">
+                        Vuốt qua các chữ liền kề để ghép đáp án
                     </p>
 
-                    {/* SOLVED ALERT / EXPLANATION */}
-                    {solvedCurrent && (
-                        <div className="mt-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 p-3 text-emerald-300 text-xs md:text-sm font-semibold animate-fade-in flex items-start gap-2">
-                            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400 mt-0.5" />
-                            <div>
-                                <span className="font-black text-white">Chính xác! </span>
-                                <span>Đáp án là: <strong className="text-amber-300 font-extrabold">{currentQuestion.displayAnswer}</strong></span>
-                                {currentQuestion.explanation && (
-                                    <p className="mt-1 text-slate-300 font-normal italic">
-                                        {currentQuestion.explanation}
-                                    </p>
-                                )}
-                            </div>
+                    {/* Giải thích sau khi trả lời đúng */}
+                    {solvedCurrent && currentQuestion?.explanation && (
+                        <div className="mt-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 font-medium animate-fade-in text-left">
+                            <span className="font-black text-emerald-900">Giải thích: </span>
+                            {currentQuestion.explanation}
                         </div>
                     )}
                 </div>
 
-                {/* 2. SPELLED WORD RIBBON (Like AlphaBetty Saga wooden board) */}
-                <div className="my-3 flex flex-col items-center">
+                {/* 3. MATRIX GRID (4x4 or 5x5 pastel blocks) */}
+                <div className="mt-5 mb-3 flex flex-col items-center">
                     <div
-                        className={`min-w-[220px] max-w-md px-6 py-2.5 rounded-2xl border-2 transition-all duration-200 flex items-center justify-center gap-2 shadow-2xl ${
-                            solvedCurrent
-                                ? "bg-emerald-600 border-emerald-300 scale-105"
-                                : shakeWrong
-                                ? "bg-rose-900/80 border-rose-400 animate-shake"
-                                : "bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 border-yellow-300/60 shadow-amber-900/50"
+                        className={`rounded-[30px] bg-white/70 backdrop-blur-md p-3.5 shadow-sm border border-white transition-all ${
+                            shakeWrong ? "animate-shake bg-rose-50/80 border-rose-200" : ""
                         }`}
                     >
-                        <span className="text-xs uppercase font-extrabold tracking-widest text-amber-200/70 mr-1">
-                            Từ nối:
-                        </span>
-                        <span className="text-xl md:text-2xl font-black tracking-widest text-white drop-shadow-md min-h-[32px] flex items-center">
-                            {currentSpelled || (
-                                <span className="text-amber-300/40 font-mono tracking-widest text-base">
-                                    {"_ ".repeat(currentQuestion?.wordAnswer?.length || 4)}
-                                </span>
-                            )}
-                        </span>
-                        {solvedCurrent && <PartyPopper className="h-5 w-5 text-yellow-300 ml-1 animate-spin" />}
-                    </div>
-                </div>
+                        <div
+                            className="grid gap-2.5 md:gap-3"
+                            style={{
+                                gridTemplateColumns: `repeat(${grid.length || 4}, minmax(0, 1fr))`,
+                            }}
+                        >
+                            {grid.map((row) =>
+                                row.map((cell) => {
+                                    const isSelected = selectedCells.some((c) => c.id === cell.id);
+                                    const isHinted = showHint && cell.isTarget;
 
-                {/* 3. ALPHABETTY SAGA GRID TILES */}
-                <div className="relative my-auto flex flex-col items-center">
-                    <div
-                        className="grid gap-2 md:gap-3 p-3 md:p-4 rounded-3xl bg-slate-900/80 border-2 border-indigo-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl"
-                        style={{
-                            gridTemplateColumns: `repeat(${grid.length || 5}, minmax(0, 1fr))`,
-                        }}
-                    >
-                        {grid.map((row) =>
-                            row.map((cell) => {
-                                const isSelected = selectedCells.some((c) => c.id === cell.id);
-                                const isHead = selectedCells.length > 0 && selectedCells[selectedCells.length - 1].id === cell.id;
-                                const isHinted =
-                                    showHint &&
-                                    targetPath.slice(0, 2).some(([r, c]) => r === cell.row && c === cell.col);
-
-                                return (
-                                    <div
-                                        key={cell.id}
-                                        onPointerDown={() => handleCellPointerDown(cell)}
-                                        onPointerEnter={() => handleCellPointerEnter(cell)}
-                                        className={`relative flex h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 cursor-pointer items-center justify-center rounded-2xl font-black transition-transform duration-150 select-none shadow-md ${
-                                            isSelected
-                                                ? "bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 scale-105 border-2 border-emerald-200 shadow-emerald-500/50 shadow-lg"
-                                                : isHinted
-                                                ? "bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 animate-pulse border-2 border-white shadow-amber-400/60 shadow-lg"
-                                                : "bg-gradient-to-b from-[#f3f0e6] to-[#ded6c3] text-[#3e3428] border-b-4 border-[#b5a990] hover:bg-[#fffdf8] hover:scale-105 active:scale-95"
-                                        }`}
-                                    >
-                                        {/* Big Letter */}
-                                        <span className="text-xl sm:text-2xl md:text-3xl font-black drop-shadow-sm">
-                                            {cell.letter}
-                                        </span>
-
-                                        {/* Small Scrabble Point on Bottom Right */}
-                                        <span
-                                            className={`absolute bottom-1 right-1.5 text-[9px] font-bold ${
-                                                isSelected ? "text-slate-900/80" : "text-amber-900/60"
+                                    return (
+                                        <div
+                                            key={cell.id}
+                                            onPointerDown={() => handleCellPointerDown(cell)}
+                                            onPointerEnter={() => handleCellPointerEnter(cell)}
+                                            className={`relative flex h-14 w-14 md:h-16 md:w-16 cursor-pointer items-center justify-center rounded-2xl text-xl md:text-2xl font-black transition-all duration-150 select-none shadow-xs active:scale-95 ${
+                                                isSelected
+                                                    ? "bg-purple-600 text-white scale-105 shadow-md shadow-purple-300 border-2 border-purple-300 z-10"
+                                                    : isHinted
+                                                    ? "bg-yellow-300 text-slate-900 border-2 border-yellow-500 scale-105 animate-pulse shadow-md"
+                                                    : `${cell.colorClass} hover:opacity-90`
                                             }`}
                                         >
-                                            {cell.points}
-                                        </span>
+                                            {cell.letter}
 
-                                        {/* Head indicator (current selection pointer) */}
-                                        {isHead && (
-                                            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-yellow-300 border border-slate-900 text-[8px] text-slate-900 font-extrabold animate-ping" />
-                                        )}
-                                    </div>
-                                );
-                            }),
-                        )}
+                                            {/* Hint number indicator */}
+                                            {isHinted && cell.targetIndex !== undefined && (
+                                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[9px] font-black text-white">
+                                                    {cell.targetIndex + 1}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                }),
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {/* 4. BOTTOM ACTION TOOLBAR / POWER-UPS */}
-                <div className="mt-3 flex items-center justify-center gap-3 w-full max-w-md">
-                    {/* Clear selection */}
-                    <button
-                        type="button"
-                        onClick={() => setSelectedCells([])}
-                        disabled={selectedCells.length === 0 || solvedCurrent}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:pointer-events-none py-3 px-4 font-bold text-xs text-slate-200 transition active:scale-95 border border-white/5"
-                    >
-                        <RotateCcw className="h-4 w-4" />
-                        Xóa chọn
-                    </button>
-
-                    {/* Hint Button */}
+                {/* 4. BOTTOM ACTION BUTTONS: "💡 Gợi ý -30" & "Bỏ qua →" */}
+                <div className="mt-2 flex items-center justify-center gap-3">
+                    {/* Nút Gợi ý -30 */}
                     <button
                         type="button"
                         onClick={handleHint}
                         disabled={showHint || solvedCurrent}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-30 disabled:pointer-events-none py-3 px-4 font-bold text-xs text-amber-300 transition active:scale-95 border border-amber-500/30"
+                        className="inline-flex items-center gap-2 rounded-full bg-[#fde047] hover:bg-yellow-300 disabled:opacity-40 disabled:pointer-events-none px-6 py-2.5 text-xs md:text-sm font-black text-slate-900 shadow-sm transition active:scale-95 border border-yellow-300"
                     >
-                        <Lightbulb className="h-4 w-4 text-amber-400" />
-                        Gợi ý
+                        <Lightbulb className="h-4 w-4 text-amber-700" />
+                        Gợi ý -30
                     </button>
 
-                    {/* Shuffle Grid */}
+                    {/* Nút Bỏ qua → */}
                     <button
                         type="button"
-                        onClick={handleShuffle}
+                        onClick={handleSkip}
                         disabled={solvedCurrent}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-indigo-500/20 hover:bg-indigo-500/30 disabled:opacity-30 disabled:pointer-events-none py-3 px-4 font-bold text-xs text-indigo-300 transition active:scale-95 border border-indigo-500/30"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none px-6 py-2.5 text-xs md:text-sm font-black text-slate-700 shadow-sm transition active:scale-95 border border-slate-100"
                     >
-                        <Shuffle className="h-4 w-4 text-indigo-400" />
-                        Xáo bảng
+                        Bỏ qua →
                     </button>
                 </div>
+
+                {/* Dòng chú thích dưới cùng */}
+                <p className="mt-3 text-center text-xs font-semibold text-slate-400">
+                    Khó quá? Bấm &quot;Gợi ý&quot; để thấy đường đi của đáp án.
+                </p>
             </main>
 
-            {/* 5. VICTORY CELEBRATION MODAL */}
+            {/* 5. VICTORY / END MODAL */}
             {isFinished && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in">
-                    <div className="relative w-full max-w-md rounded-3xl bg-gradient-to-b from-slate-900 to-indigo-950 border-2 border-amber-400/50 p-6 md:p-8 text-center shadow-[0_25px_60px_rgba(251,191,36,0.3)]">
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-amber-500 to-yellow-300 text-slate-950 shadow-xl mb-4 animate-bounce">
-                            <Trophy className="h-10 w-10" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in">
+                    <div className="relative w-full max-w-sm rounded-[32px] bg-white p-6 md:p-8 text-center shadow-2xl border border-purple-100">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 shadow-md mb-4 animate-bounce">
+                            <Trophy className="h-10 w-10 text-amber-800" />
                         </div>
 
-                        <span className="rounded-full bg-amber-500/20 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-amber-300">
-                            Hoàn Thành Xuất Sắc!
+                        <span className="rounded-full bg-purple-100 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-purple-700">
+                            Hoàn Thành Màn Chơi!
                         </span>
 
-                        <h2 className="mt-2 text-2xl font-black text-white">
+                        <h2 className="mt-2 text-2xl font-black text-slate-900">
                             Chúc Mừng Bạn!
                         </h2>
 
-                        <p className="mt-2 text-sm text-slate-300">
-                            Bạn đã vượt qua toàn bộ thử thách nối chữ của chủ đề <strong className="text-amber-300">{topic.name}</strong>!
+                        <p className="mt-2 text-xs md:text-sm text-slate-500">
+                            Bạn đã hoàn thành các câu hỏi nối từ của chủ đề <strong className="text-purple-700">{topic.name}</strong>!
                         </p>
 
-                        <div className="my-6 grid grid-cols-2 gap-3 rounded-2xl bg-white/5 border border-white/10 p-4">
+                        <div className="my-5 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 border border-slate-100 p-4">
                             <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase">Tổng điểm</p>
-                                <p className="text-2xl font-black text-amber-300">{score}</p>
+                                <p className="text-[11px] font-bold text-slate-400 uppercase">Tổng điểm</p>
+                                <p className="text-2xl font-black text-amber-600">⭐ {score}</p>
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase">Câu trả lời</p>
-                                <p className="text-2xl font-black text-emerald-400">{questions.length} / {questions.length}</p>
+                                <p className="text-[11px] font-bold text-slate-400 uppercase">Câu hỏi</p>
+                                <p className="text-2xl font-black text-purple-600">{questions.length} / {questions.length}</p>
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2.5">
                             <button
                                 type="button"
                                 onClick={handleRestart}
-                                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 transition shadow-lg active:scale-95"
+                                className="w-full flex items-center justify-center gap-2 rounded-full bg-[#fde047] hover:bg-yellow-300 text-slate-950 font-black py-3 transition shadow-sm active:scale-95 text-sm"
                             >
-                                <RotateCcw className="h-5 w-5" />
+                                <RotateCcw className="h-4 w-4" />
                                 Chơi lại từ đầu
                             </button>
                             <button
                                 type="button"
                                 onClick={onBack}
-                                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold py-3 transition active:scale-95"
+                                className="w-full flex items-center justify-center gap-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 transition active:scale-95 text-sm"
                             >
                                 Quay về chủ đề
                             </button>
