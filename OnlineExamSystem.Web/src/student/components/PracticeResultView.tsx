@@ -24,6 +24,7 @@ interface PracticeResultViewProps {
     onBack: () => void;
     onRetry?: () => void;
     onStartWordGame?: () => void;
+    onStartChessGame?: () => void;
     earnedStars?: number | null;
 }
 
@@ -32,6 +33,7 @@ export default function PracticeResultView({
     onBack,
     onRetry,
     onStartWordGame,
+    onStartChessGame,
     earnedStars,
 }: PracticeResultViewProps) {
     const [detail, setDetail] =
@@ -298,6 +300,17 @@ export default function PracticeResultView({
                             >
                                 <Gamepad2 className="h-4 w-4" />
                                 Game Nối Chữ
+                            </button>
+                        )}
+
+                        {onStartChessGame && (
+                            <button
+                                type="button"
+                                onClick={onStartChessGame}
+                                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-2.5 text-sm font-black text-white transition hover:from-pink-600 hover:to-purple-700 shadow-md active:scale-95"
+                            >
+                                <span>♟️</span>
+                                Cờ Vua Giải Đố
                             </button>
                         )}
 

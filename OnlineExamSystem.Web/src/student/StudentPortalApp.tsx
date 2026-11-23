@@ -4,6 +4,7 @@
 */
 import TopicPracticeView from "./components/TopicPracticeView";
 import WordPuzzleGameView from "./components/WordPuzzleGameView";
+import ChessPuzzleGameView from "./components/ChessPuzzleGameView";
 import GamePracticeTab from "./components/GamePracticeTab";
 import { apiUrl } from "../api";
 
@@ -81,6 +82,12 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     const [
         selectedWordGameTopic,
         setSelectedWordGameTopic,
+    ] = React.useState<TopicDto | null>(
+        null,
+    );
+    const [
+        selectedChessGameTopic,
+        setSelectedChessGameTopic,
     ] = React.useState<TopicDto | null>(
         null,
     );
@@ -398,6 +405,18 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                             setSelectedTopic(null);
                         }}
                         onEarnStars={handleEarnStars}
+                        onStartWordGame={() => {
+                            const topicToPlay = selectedTopic;
+                            setSelectedTopic(null);
+                            setSelectedWordGameTopic(topicToPlay);
+                            setActiveTab(2);
+                        }}
+                        onStartChessGame={() => {
+                            const topicToPlay = selectedTopic;
+                            setSelectedTopic(null);
+                            setSelectedChessGameTopic(topicToPlay);
+                            setActiveTab(2);
+                        }}
                     />
                 );
             }
@@ -411,6 +430,20 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
             );
         case 2:
             // MỤC LUYỆN TẬP RIÊNG (CHIA THEO MÔN HỌC -> CÁC GAME ÔN TẬP)
+            if (selectedChessGameTopic) {
+                return (
+                    <ChessPuzzleGameView
+                        topic={selectedChessGameTopic}
+                        onBack={() => {
+                            setSelectedChessGameTopic(null);
+                        }}
+                        onEarnGems={handleEarnGems}
+                        userStars={stats.stars ?? 0}
+                        onUseStars={handleUseStars}
+                    />
+                );
+            }
+
             if (selectedWordGameTopic) {
                 return (
                     <WordPuzzleGameView
@@ -429,6 +462,9 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                 <GamePracticeTab
                     onSelectWordGame={(topic) => {
                         setSelectedWordGameTopic(topic);
+                    }}
+                    onSelectChessGame={(topic) => {
+                        setSelectedChessGameTopic(topic);
                     }}
                 />
             );

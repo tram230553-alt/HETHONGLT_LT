@@ -28,6 +28,7 @@ import { getSubjects } from "../../services/subjectService";
 
 interface GamePracticeTabProps {
     onSelectWordGame: (topic: TopicDto) => void;
+    onSelectChessGame?: (topic: TopicDto) => void;
 }
 
 /* =========================================================
@@ -100,7 +101,7 @@ const getSubjectIconAndStyle = (subjectName: string, index: number) => {
    COMPONENT
 ========================================================= */
 
-export default function GamePracticeTab({ onSelectWordGame }: GamePracticeTabProps) {
+export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }: GamePracticeTabProps) {
     const [topics, setTopics] = useState<TopicDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
@@ -327,25 +328,51 @@ export default function GamePracticeTab({ onSelectWordGame }: GamePracticeTabPro
                 </div>
 
                 {/* GAME CATEGORIES BANNER */}
-                <div className="mb-6 rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 p-5 md:p-6 text-white shadow-md flex items-center justify-between gap-4">
-                    <div className="max-w-lg">
-                        <div className="flex items-center gap-2 mb-1.5">
-                            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-purple-200">
-                                Minigame chính
-                            </span>
-                            <span className="text-xs font-bold text-purple-200">
-                                Phong cách AlphaBetty Saga
-                            </span>
+                <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Card 1: Game Nối Chữ */}
+                    <div className="rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 p-5 text-white shadow-md flex items-center justify-between gap-4">
+                        <div className="max-w-md">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-purple-200">
+                                    Câu hỏi Tự luận
+                                </span>
+                                <span className="text-xs font-bold text-purple-200">
+                                    AlphaBetty Saga
+                                </span>
+                            </div>
+                            <h2 className="text-lg font-black text-white">
+                                Game Nối Chữ (Word Puzzle)
+                            </h2>
+                            <p className="text-xs text-purple-100 mt-1 leading-relaxed">
+                                Vuốt qua các chữ cái liền kề để giải mã đáp án tự luận của chủ đề.
+                            </p>
                         </div>
-                        <h2 className="text-lg md:text-xl font-black text-white">
-                            Game Nối Chữ (Word Puzzle)
-                        </h2>
-                        <p className="text-xs text-purple-100 mt-1 leading-relaxed">
-                            Vuốt qua các chữ cái liền kề để giải mã đáp án tự luận. Chọn chủ đề bên dưới để vào màn chơi ngay!
-                        </p>
+                        <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-2xl">
+                            🧩
+                        </div>
                     </div>
-                    <div className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-3xl">
-                        🧩
+
+                    {/* Card 2: Cờ Vua Giải Đố */}
+                    <div className="rounded-3xl bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 p-5 text-white shadow-md flex items-center justify-between gap-4">
+                        <div className="max-w-md">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-pink-100">
+                                    Câu hỏi Đúng / Sai
+                                </span>
+                                <span className="text-xs font-bold text-pink-100">
+                                    Đấu trí AI
+                                </span>
+                            </div>
+                            <h2 className="text-lg font-black text-white">
+                                Cờ Vua Giải Đố (Chess Quiz)
+                            </h2>
+                            <p className="text-xs text-pink-100 mt-1 leading-relaxed">
+                                Chọn nước đi trên bàn cờ, trả lời đúng câu hỏi Đúng / Sai thì quân mới được di chuyển!
+                            </p>
+                        </div>
+                        <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-2xl">
+                            ♟️
+                        </div>
                     </div>
                 </div>
 
@@ -383,16 +410,30 @@ export default function GamePracticeTab({ onSelectWordGame }: GamePracticeTabPro
                                         </div>
                                     </div>
 
-                                    {/* Action button to launch game */}
-                                    <button
-                                        type="button"
-                                        onClick={() => onSelectWordGame(topic)}
-                                        className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-black text-slate-950 shadow-xs hover:from-amber-400 hover:to-yellow-400 transition active:scale-95"
-                                        title="Chơi Game Nối Chữ chủ đề này"
-                                    >
-                                        <Play className="h-3.5 w-3.5 fill-current" />
-                                        Chơi Game
-                                    </button>
+                                    {/* Action buttons to launch Word Puzzle or Chess Puzzle */}
+                                    <div className="shrink-0 flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => onSelectWordGame(topic)}
+                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-2 text-xs font-black text-slate-950 shadow-xs hover:from-amber-400 hover:to-yellow-400 transition active:scale-95"
+                                            title="Chơi Game Nối Chữ (Tự luận)"
+                                        >
+                                            <span>🧩</span>
+                                            <span>Nối chữ</span>
+                                        </button>
+
+                                        {onSelectChessGame && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onSelectChessGame(topic)}
+                                                className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-3 py-2 text-xs font-black text-white shadow-xs hover:from-pink-600 hover:to-purple-700 transition active:scale-95"
+                                                title="Chơi Cờ Vua Giải Đố (Đúng / Sai)"
+                                            >
+                                                <span>♟️</span>
+                                                <span>Cờ vua</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}

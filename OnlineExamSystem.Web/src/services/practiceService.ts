@@ -38,6 +38,21 @@ export interface WordPuzzleQuestionDto {
 }
 
 /* =========================================================
+   CHESS PUZZLE (TRUE / FALSE QUESTIONS)
+========================================================= */
+
+export interface ChessQuestionDto {
+    id: string;
+    noiDung: string;
+    questionText: string;
+    isTrue: boolean;
+    correctAnswer: string;
+    explanation?: string | null;
+    topicId: string;
+    topicName: string;
+}
+
+/* =========================================================
    SUBMIT ANSWER
 ========================================================= */
 
@@ -193,6 +208,21 @@ export async function getWordPuzzleQuestions(
 }
 
 /* =========================================================
+   GET CHESS QUESTIONS (TRUE / FALSE)
+========================================================= */
+
+export async function getChessQuestions(
+    topicId: string,
+): Promise<ChessQuestionDto[]> {
+    return await apiRequest<ChessQuestionDto[]>(
+        `/api/students/topics/${topicId}/chess-questions`,
+        {
+            method: "GET",
+        },
+    );
+}
+
+/* =========================================================
    SUBMIT
 ========================================================= */
 
@@ -246,6 +276,7 @@ export async function getPracticeAttemptDetail(
 export const practiceService = {
     getPracticeQuestions,
     getWordPuzzleQuestions,
+    getChessQuestions,
     submitPractice,
     getPracticeAttempts,
     getPracticeAttemptDetail,

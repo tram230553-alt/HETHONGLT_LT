@@ -20,6 +20,7 @@ using OnlineExamSystem.Application.Features.Students.Queries.GetLoginSessions;
 using OnlineExamSystem.Application.StudentTopics.Queries.GetPracticeQuestionsByTopic;
 using OnlineExamSystem.Application.Features.Students.Commands.SubmitPractice;
 using OnlineExamSystem.Application.Features.Students.Queries.GetWordPuzzleQuestionsByTopic;
+using OnlineExamSystem.Application.Features.Students.Queries.GetChessQuestionsByTopic;
 namespace OnlineExamSystem.API.Controllers
 {
     [ApiController]
@@ -256,6 +257,15 @@ namespace OnlineExamSystem.API.Controllers
         {
             var result = await _mediator.Send(
                 new GetWordPuzzleQuestionsByTopicQuery(topicId));
+
+            return Ok(result);
+        }
+
+        [HttpGet("topics/{topicId}/chess-questions")]
+        public async Task<IActionResult> GetChessQuestionsByTopic(Guid topicId)
+        {
+            var result = await _mediator.Send(
+                new GetChessQuestionsByTopicQuery(topicId));
 
             return Ok(result);
         }

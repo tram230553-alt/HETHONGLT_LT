@@ -27,6 +27,7 @@ interface TopicPracticeViewProps {
     topic: TopicDto;
     onBack: () => void;
     onStartWordGame?: () => void;
+    onStartChessGame?: () => void;
     onEarnStars?: (amount: number) => void;
 }
 
@@ -34,6 +35,7 @@ export default function TopicPracticeView({
     topic,
     onBack,
     onStartWordGame,
+    onStartChessGame,
     onEarnStars,
 }: TopicPracticeViewProps) {
     const [questions, setQuestions] =
@@ -232,6 +234,7 @@ export default function TopicPracticeView({
                     onBack={onBack}
                     onRetry={handleRetry}
                     onStartWordGame={onStartWordGame}
+                    onStartChessGame={onStartChessGame}
                     earnedStars={lastEarnedStars}
                 />
             </div>
