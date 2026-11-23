@@ -40,61 +40,64 @@ interface SubjectOption {
     name: string;
     topicCount: number;
     icon: typeof GraduationCap;
-    gradient: string;
-    badgeColor: string;
+    theme: {
+        wrapper: string;
+        icon: string;
+        active: string;
+    };
 }
 
-const getSubjectIconAndStyle = (subjectName: string, index: number) => {
+const getSubjectIcon = (subjectName: string) => {
     const name = (subjectName || "").toLowerCase();
     if (name.includes("toán") || name.includes("math")) {
-        return {
-            icon: Sigma,
-            gradient: "from-blue-500/10 via-cyan-500/5 to-white border-blue-200/80 hover:border-blue-400",
-            badgeColor: "bg-blue-100 text-blue-700",
-            iconBg: "bg-blue-500 text-white",
-        };
+        return Sigma;
     }
-    if (name.includes("hóa") || name.includes("hoá") || name.includes("sinh")) {
-        return {
-            icon: FlaskConical,
-            gradient: "from-emerald-500/10 via-teal-500/5 to-white border-emerald-200/80 hover:border-emerald-400",
-            badgeColor: "bg-emerald-100 text-emerald-700",
-            iconBg: "bg-emerald-500 text-white",
-        };
+    if (name.includes("khoa học") || name.includes("hóa") || name.includes("hoá") || name.includes("sinh")) {
+        return FlaskConical;
     }
-    if (name.includes("lý") || name.includes("lí") || name.includes("vật")) {
-        return {
-            icon: Atom,
-            gradient: "from-purple-500/10 via-indigo-500/5 to-white border-purple-200/80 hover:border-purple-400",
-            badgeColor: "bg-purple-100 text-purple-700",
-            iconBg: "bg-purple-500 text-white",
-        };
+    if (name.includes("lịch sử") || name.includes("địa") || name.includes("sử")) {
+        return Landmark;
     }
-    if (name.includes("sử") || name.includes("địa")) {
-        return {
-            icon: Landmark,
-            gradient: "from-amber-500/10 via-orange-500/5 to-white border-amber-200/80 hover:border-amber-400",
-            badgeColor: "bg-amber-100 text-amber-700",
-            iconBg: "bg-amber-500 text-white",
-        };
+    if (name.includes("vật lý") || name.includes("vật lí") || name.includes("lý")) {
+        return Atom;
     }
-    const defaultStyles = [
+    return GraduationCap;
+};
+
+const getSubjectTheme = (index: number) => {
+    const themes = [
         {
-            gradient: "from-rose-500/10 via-pink-500/5 to-white border-rose-200/80 hover:border-rose-400",
-            badgeColor: "bg-rose-100 text-rose-700",
-            iconBg: "bg-rose-500 text-white",
+            wrapper: "from-orange-50 via-white to-amber-50",
+            icon: "bg-orange-100 text-orange-600",
+            active: "border-orange-300",
         },
         {
-            gradient: "from-indigo-500/10 via-blue-500/5 to-white border-indigo-200/80 hover:border-indigo-400",
-            badgeColor: "bg-indigo-100 text-indigo-700",
-            iconBg: "bg-indigo-500 text-white",
+            wrapper: "from-emerald-50 via-white to-teal-50",
+            icon: "bg-emerald-100 text-emerald-600",
+            active: "border-emerald-300",
+        },
+        {
+            wrapper: "from-sky-50 via-white to-blue-50",
+            icon: "bg-sky-100 text-sky-600",
+            active: "border-sky-300",
+        },
+        {
+            wrapper: "from-violet-50 via-white to-purple-50",
+            icon: "bg-violet-100 text-violet-600",
+            active: "border-violet-300",
+        },
+        {
+            wrapper: "from-rose-50 via-white to-pink-50",
+            icon: "bg-rose-100 text-rose-600",
+            active: "border-rose-300",
+        },
+        {
+            wrapper: "from-cyan-50 via-white to-slate-50",
+            icon: "bg-cyan-100 text-cyan-600",
+            active: "border-cyan-300",
         },
     ];
-    const picked = defaultStyles[index % defaultStyles.length];
-    return {
-        icon: GraduationCap,
-        ...picked,
-    };
+    return themes[index % themes.length];
 };
 
 /* =========================================================
@@ -146,14 +149,14 @@ export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }:
         });
 
         return Array.from(map.values()).map((item, index) => {
-            const style = getSubjectIconAndStyle(item.name, index);
+            const icon = getSubjectIcon(item.name);
+            const theme = getSubjectTheme(index);
             return {
                 id: item.id,
                 name: item.name,
                 topicCount: item.count,
-                icon: style.icon,
-                gradient: style.gradient,
-                badgeColor: style.badgeColor,
+                icon,
+                theme,
             };
         });
     }, [topics]);
@@ -227,38 +230,46 @@ export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }:
                         </span>
                     </div>
 
-                    {/* Grid các môn học */}
+                    {/* Grid các môn học - Đồng bộ giao diện với TopicTab */}
                     <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                        {subjects.map((sub, idx) => {
+                        {subjects.map((sub) => {
                             const Icon = sub.icon;
+                            const theme = sub.theme;
                             return (
                                 <button
                                     key={sub.id}
                                     type="button"
                                     onClick={() => setSelectedSubjectId(sub.id)}
-                                    className={`group text-left relative flex flex-col justify-between p-3.5 rounded-2xl border-2 bg-gradient-to-br ${sub.gradient} shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md active:scale-[0.99]`}
+                                    className="group overflow-hidden rounded-[20px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_10px_25px_rgba(15,23,42,0.08)]"
                                 >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-xs border border-slate-100 group-hover:scale-105 transition duration-200 shrink-0">
-                                            <Icon className="h-5 w-5 text-slate-800" />
+                                    {/* KHỐI BIỂU TƯỢNG VÀ NỀN TRÊN */}
+                                    <div
+                                        className={`relative flex h-[105px] items-center justify-center overflow-hidden bg-gradient-to-br ${theme.wrapper}`}
+                                    >
+                                        <div className="absolute -left-5 -top-5 h-16 w-16 rounded-full bg-white/70" />
+                                        <div className="absolute -bottom-8 -right-6 h-24 w-24 rounded-full bg-white/60" />
+
+                                        <div
+                                            className={`relative flex h-14 w-14 items-center justify-center rounded-[20px] ${theme.icon} shadow-sm transition duration-300 group-hover:scale-110 group-hover:rotate-3`}
+                                        >
+                                            <Icon className="h-7 w-7" />
                                         </div>
-                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black shrink-0 ${sub.badgeColor}`}>
-                                            {sub.topicCount} bài
-                                        </span>
                                     </div>
 
-                                    <div className="mt-4">
-                                        <h3 className="text-sm font-black text-slate-900 group-hover:text-amber-600 transition truncate" title={sub.name}>
+                                    {/* NỘI DUNG TÊN MÔN VÀ BÀI TẬP */}
+                                    <div className="p-3.5">
+                                        <h2 className="truncate text-sm font-black text-[#202026] md:text-base" title={sub.name}>
                                             {sub.name}
-                                        </h3>
-                                        <p className="mt-1 text-[11px] text-slate-500 truncate">
-                                            Game nối từ & câu hỏi ngắn
-                                        </p>
-                                    </div>
+                                        </h2>
 
-                                    <div className="mt-3 flex items-center justify-between border-t border-slate-100/80 pt-2 text-xs font-extrabold text-amber-600">
-                                        <span>Chọn game</span>
-                                        <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition" />
+                                        <p className="mt-1 truncate text-xs text-slate-500">
+                                            {sub.topicCount} bài luyện tập
+                                        </p>
+
+                                        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-xs font-bold text-orange-500">
+                                            <span>Vào chơi game</span>
+                                            <ChevronRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-orange-500" />
+                                        </div>
                                     </div>
                                 </button>
                             );

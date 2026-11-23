@@ -1002,9 +1002,9 @@ export default function ChessPuzzleGameView({
 
             {/* QUESTION MODAL ON MOVE (Matches Screenshot 2 & Piece Type Rules) */}
             {pendingMove && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-[4px] animate-fade-in">
-                    <div className="w-full max-w-[480px] rounded-[32px] bg-white p-6 sm:p-7 shadow-2xl border border-white/80">
-                        {/* Top Badges: Piece & Type Label + Countdown Timer */}
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-md animate-fade-in">
+                    <div className="w-full max-w-[480px] rounded-[32px] bg-white p-6 sm:p-8 shadow-2xl border border-white">
+                        {/* Top Badges: Piece & Type Label + Countdown Timer (Matches Screenshot 2) */}
                         <div className="flex items-center justify-between gap-2">
                             {(() => {
                                 const pieceLabel = PIECE_NAMES_VI[pendingMove.piece.type];
@@ -1013,39 +1013,39 @@ export default function ChessPuzzleGameView({
 
                                 if (qType === "single_choice" || qType === "multiple_choice") {
                                     return (
-                                        <span className="inline-flex items-center rounded-full bg-[#e0f2fe] px-3.5 py-1.5 text-xs font-black text-[#0284c7]">
+                                        <span className="inline-flex items-center rounded-full bg-purple-100 px-4 py-1.5 text-xs font-black text-purple-700">
                                             {pieceLabel} {moveNotation} · Trắc nghiệm
                                         </span>
                                     );
                                 }
                                 if (qType === "essay") {
                                     return (
-                                        <span className="inline-flex items-center rounded-full bg-[#fef3c7] px-3.5 py-1.5 text-xs font-black text-[#d97706]">
+                                        <span className="inline-flex items-center rounded-full bg-purple-100 px-4 py-1.5 text-xs font-black text-purple-700">
                                             {pieceLabel} {moveNotation} · Tự luận
                                         </span>
                                     );
                                 }
                                 return (
-                                    <span className="inline-flex items-center rounded-full bg-[#f3e8ff] px-3.5 py-1.5 text-xs font-black text-[#9333ea]">
+                                    <span className="inline-flex items-center rounded-full bg-[#f3e8ff] px-4 py-1.5 text-xs font-black text-[#a855f7]">
                                         {pieceLabel} {moveNotation} · Đúng / Sai
                                     </span>
                                 );
                             })()}
 
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-3 py-1.5 text-xs font-extrabold text-slate-600">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f1f5f9] px-3.5 py-1.5 text-xs font-bold text-slate-600">
                                 <Clock className="h-3.5 w-3.5 text-slate-500" />
-                                {modalTimeLeft}s
+                                <span>{modalTimeLeft}s</span>
                             </span>
                         </div>
 
-                        {/* Question Statement */}
-                        <h3 className="my-5 text-base sm:text-lg font-black text-slate-900 text-left leading-snug">
+                        {/* Question Statement (Matches Screenshot 2) */}
+                        <h3 className="my-6 text-lg sm:text-xl font-extrabold text-[#1e293b] text-left leading-relaxed">
                             {pendingMove.question.questionText || pendingMove.question.noiDung}
                         </h3>
 
                         {/* Star Hint Display if Activated */}
                         {showHintInModal ? (
-                            <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 text-left">
+                            <div className="mb-5 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 text-left">
                                 <p className="font-black">
                                     💡 Gợi ý đáp án:{" "}
                                     <span className="text-amber-700 uppercase">
@@ -1077,21 +1077,21 @@ export default function ChessPuzzleGameView({
                         {(() => {
                             const qType = (pendingMove.question.type || "true_false").toLowerCase();
 
-                            // 1. TRUE / FALSE: Hai nút to ĐÚNG - SAI pastel 3D (Khớp ảnh 2)
+                            // 1. TRUE / FALSE: Hai nút to ĐÚNG - SAI pastel (Matches Screenshot 2)
                             if (qType === "true_false") {
                                 return (
                                     <div className="grid grid-cols-2 gap-4">
                                         <button
                                             type="button"
                                             onClick={() => handleAnswerQuestion("T")}
-                                            className="w-full rounded-2xl bg-[#ccfbd9] hover:bg-[#bbf7cd] border-b-4 border-[#9ae6b4] py-4 text-base font-black text-[#1e4631] transition active:translate-y-0.5"
+                                            className="w-full rounded-2xl bg-[#bbf7d0] hover:bg-[#a7f3d0] py-4 text-base sm:text-lg font-black text-[#15803d] transition duration-150 active:scale-[0.98] shadow-xs"
                                         >
                                             ĐÚNG
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => handleAnswerQuestion("F")}
-                                            className="w-full rounded-2xl bg-[#ffd8dc] hover:bg-[#ffc6cc] border-b-4 border-[#feb2b2] py-4 text-base font-black text-[#63252b] transition active:translate-y-0.5"
+                                            className="w-full rounded-2xl bg-[#fecdd3] hover:bg-[#fca5a5] py-4 text-base sm:text-lg font-black text-[#be123c] transition duration-150 active:scale-[0.98] shadow-xs"
                                         >
                                             SAI
                                         </button>
