@@ -89,7 +89,7 @@ INSERT INTO [Questions] (
     [CorrectAnswer], [TopicId], [Difficulty], [CreatedAt], [Explanation], [Type]
 ) VALUES (
     NEWID(), '2C4BFEB8-93F2-4084-B397-3298AF29A729', '1081A0E9-B18A-4028-8AB9-50897108A889', '41A0DB31-C8A7-4420-927D-18E661175B46', N'Đồng tiền chung châu Âu (Euro) chính thức được đưa vào lưu hành tiền mặt từ năm 2002.',
-    N'Đúng', N'Sai', N'', N'',
+    N'Đúng', N'Sai', N'', N''
     'true', 'D083177E-A856-46B7-A2A5-E33CB7DB7759', 'medium', GETDATE(), N'Đồng Euro bắt đầu lưu hành tiền mặt vào ngày 1/1/2002.', 'true_false'
 );
 

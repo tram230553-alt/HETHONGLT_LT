@@ -208,33 +208,35 @@ export default function GamePracticeTab({
         };
     }, []);
 
-    // Nhóm danh sách các môn học kèm tổng số lượng câu hỏi
+    // Nhóm danh sách các môn học kèm tổng số lượng câu hỏi (chỉ lấy các môn có câu hỏi)
     const subjects = useMemo<SubjectItem[]>(() => {
         const map = new Map<string, { id: string; name: string; questionCount: number }>();
         topics.forEach((t) => {
-            if (!t.subjectId) return;
+            if (!t.subjectId || !t.questionCount || t.questionCount <= 0) return;
             const existing = map.get(t.subjectId);
             if (existing) {
-                existing.questionCount += (t.questionCount || 0);
+                existing.questionCount += t.questionCount;
             } else {
                 map.set(t.subjectId, {
                     id: t.subjectId,
                     name: t.subjectName || "Môn học",
-                    questionCount: t.questionCount || 0,
+                    questionCount: t.questionCount,
                 });
             }
         });
 
-        return Array.from(map.values()).map((sub) => {
-            const meta = getSubjectIconMeta(sub.name);
-            return {
-                id: sub.id,
-                name: sub.name,
-                questionCount: sub.questionCount,
-                iconElement: meta.iconElement,
-                iconBg: meta.iconBg,
-            };
-        });
+        return Array.from(map.values())
+            .filter((sub) => sub.questionCount > 0)
+            .map((sub) => {
+                const meta = getSubjectIconMeta(sub.name);
+                return {
+                    id: sub.id,
+                    name: sub.name,
+                    questionCount: sub.questionCount,
+                    iconElement: meta.iconElement,
+                    iconBg: meta.iconBg,
+                };
+            });
     }, [topics]);
 
     // Khi chuyển sang Bước 2, tự động chọn môn đầu tiên nếu chưa có môn nào được chọn
@@ -488,7 +490,7 @@ export default function GamePracticeTab({
                                                 {sub.name}
                                             </h3>
                                             <p className="mt-0.5 text-xs text-slate-500 font-medium">
-                                                {sub.questionCount > 0 ? `${sub.questionCount} câu hỏi` : "10 câu hỏi"}
+                                                {sub.questionCount} câu hỏi
                                             </p>
                                         </div>
                                     </div>
