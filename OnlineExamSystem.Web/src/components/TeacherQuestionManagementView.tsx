@@ -19,6 +19,11 @@ import {
     Save,
     ChevronDown,
     ChevronRight,
+    CheckSquare,
+    HelpCircle,
+    PenTool,
+    ListChecks,
+    Layers,
 } from "lucide-react";
 
 import {
@@ -99,6 +104,9 @@ export default function TeacherQuestionManagementView({
 
     const [difficultyFilter, setDifficultyFilter] =
         useState("all");
+
+    const [typeFilter, setTypeFilter] =
+        useState<string>("all");
 
 
 
@@ -229,6 +237,40 @@ export default function TeacherQuestionManagementView({
 
 
     /* =====================================================
+       QUESTION TYPE STATS (MÔN HỌC HIỆN TẠI)
+    ===================================================== */
+
+    const teacherSubjectQuestions = useMemo(() => {
+        return questions.filter(
+            q => q.subjectId === currentTeacher.subjectId
+        );
+    }, [questions, currentTeacher.subjectId]);
+
+    const typeStats = useMemo(() => {
+        const total = teacherSubjectQuestions.length;
+        const singleChoice = teacherSubjectQuestions.filter(
+            q => !q.type || q.type === "single_choice"
+        ).length;
+        const trueFalse = teacherSubjectQuestions.filter(
+            q => q.type === "true_false"
+        ).length;
+        const essay = teacherSubjectQuestions.filter(
+            q => q.type === "essay"
+        ).length;
+        const multipleChoice = teacherSubjectQuestions.filter(
+            q => q.type === "multiple_choice"
+        ).length;
+
+        return {
+            total,
+            singleChoice,
+            trueFalse,
+            essay,
+            multipleChoice,
+        };
+    }, [teacherSubjectQuestions]);
+
+    /* =====================================================
        QUESTION FILTER
     ===================================================== */
 
@@ -290,6 +332,16 @@ export default function TeacherQuestionManagementView({
             }
 
 
+            /*
+             * Question Type (Trắc nghiệm, Đúng/Sai, Tự luận, Nhiều ĐA)
+             */
+            if (typeFilter !== "all") {
+                const qType = question.type || "single_choice";
+                if (qType !== typeFilter) {
+                    return false;
+                }
+            }
+
 
             return true;
 
@@ -300,6 +352,7 @@ export default function TeacherQuestionManagementView({
         search,
         topicFilter,
         difficultyFilter,
+        typeFilter,
         currentTeacher.subjectId,
     ]);
 
@@ -1115,7 +1168,7 @@ export default function TeacherQuestionManagementView({
     const questionPagination = usePagination(
         orderedQuestions,
         20,
-        `${search}|${topicFilter}|${difficultyFilter}|${currentTeacher.subjectId}`
+        `${search}|${topicFilter}|${difficultyFilter}|${typeFilter}|${currentTeacher.subjectId}`
     );
 
     const groupedQuestions = useMemo(() => {
@@ -1297,6 +1350,117 @@ export default function TeacherQuestionManagementView({
 
 
             {/* =========================================
+                QUESTION TYPE CATEGORIZATION CARDS
+            ========================================= */}
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                    {
+                        key: "all",
+                        label: "Tất cả câu hỏi",
+                        count: typeStats.total,
+                        icon: Layers,
+                        borderActive: "border-slate-800 bg-slate-900 text-white shadow-md shadow-slate-900/10",
+                        borderNormal: "border-slate-200 bg-white hover:border-slate-300 text-slate-700",
+                        badgeNormal: "bg-slate-100 text-slate-800",
+                        badgeActive: "bg-white/20 text-white",
+                        iconColor: "text-slate-600",
+                    },
+                    {
+                        key: "single_choice",
+                        label: "Trắc nghiệm 1 ĐA",
+                        count: typeStats.singleChoice,
+                        icon: CheckSquare,
+                        borderActive: "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-500/20",
+                        borderNormal: "border-blue-100 bg-blue-50/40 hover:border-blue-300 text-blue-950",
+                        badgeNormal: "bg-blue-100 text-blue-700",
+                        badgeActive: "bg-white/25 text-white",
+                        iconColor: "text-blue-600",
+                    },
+                    {
+                        key: "true_false",
+                        label: "Đúng / Sai",
+                        count: typeStats.trueFalse,
+                        icon: HelpCircle,
+                        borderActive: "border-purple-600 bg-purple-600 text-white shadow-md shadow-purple-500/20",
+                        borderNormal: "border-purple-100 bg-purple-50/40 hover:border-purple-300 text-purple-950",
+                        badgeNormal: "bg-purple-100 text-purple-700",
+                        badgeActive: "bg-white/25 text-white",
+                        iconColor: "text-purple-600",
+                    },
+                    {
+                        key: "essay",
+                        label: "Tự luận",
+                        count: typeStats.essay,
+                        icon: PenTool,
+                        borderActive: "border-amber-600 bg-amber-600 text-white shadow-md shadow-amber-500/20",
+                        borderNormal: "border-amber-100 bg-amber-50/40 hover:border-amber-300 text-amber-950",
+                        badgeNormal: "bg-amber-100 text-amber-700",
+                        badgeActive: "bg-white/25 text-white",
+                        iconColor: "text-amber-600",
+                    },
+                    {
+                        key: "multiple_choice",
+                        label: "Nhiều đáp án",
+                        count: typeStats.multipleChoice,
+                        icon: ListChecks,
+                        borderActive: "border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-500/20",
+                        borderNormal: "border-emerald-100 bg-emerald-50/40 hover:border-emerald-300 text-emerald-950",
+                        badgeNormal: "bg-emerald-100 text-emerald-700",
+                        badgeActive: "bg-white/25 text-white",
+                        iconColor: "text-emerald-600",
+                    },
+                ].map((item) => {
+                    const isActive = typeFilter === item.key;
+                    const IconComponent = item.icon;
+                    return (
+                        <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setTypeFilter(item.key)}
+                            className={`group relative flex flex-col justify-between rounded-2xl border-2 p-3.5 sm:p-4 text-left transition-all active:scale-[0.98] ${
+                                isActive ? item.borderActive : item.borderNormal
+                            }`}
+                        >
+                            <div className="flex items-center justify-between gap-2">
+                                <span
+                                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
+                                        isActive
+                                            ? "bg-white/20 text-white"
+                                            : "bg-white shadow-2xs " + item.iconColor
+                                    }`}
+                                >
+                                    <IconComponent size={16} />
+                                </span>
+                                <span
+                                    className={`rounded-full px-2.5 py-0.5 text-xs font-black transition ${
+                                        isActive ? item.badgeActive : item.badgeNormal
+                                    }`}
+                                >
+                                    {item.count}
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <p
+                                    className={`text-xs font-black tracking-tight ${
+                                        isActive ? "text-white" : "text-slate-800"
+                                    }`}
+                                >
+                                    {item.label}
+                                </p>
+                                <p
+                                    className={`text-[11px] font-medium ${
+                                        isActive ? "text-white/80" : "text-slate-500"
+                                    }`}
+                                >
+                                    {item.count} câu hỏi
+                                </p>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* =========================================
                 FILTER
             ========================================= */}
 
@@ -1313,7 +1477,7 @@ export default function TeacherQuestionManagementView({
                     grid
                     grid-cols-1
                     gap-3
-                    md:grid-cols-3
+                    md:grid-cols-4
                 ">
 
                     {/* Search */}
@@ -1398,6 +1562,31 @@ export default function TeacherQuestionManagementView({
                     </select>
 
 
+                    {/* Question Type */}
+
+                    <select
+                        value={typeFilter}
+                        onChange={e => setTypeFilter(e.target.value)}
+                        className="
+                            rounded-xl
+                            border
+                            border-slate-200
+                            bg-white
+                            px-3
+                            py-2.5
+                            text-sm
+                            outline-none
+                            font-semibold
+                        "
+                    >
+                        <option value="all">Tất cả thể loại câu hỏi</option>
+                        <option value="single_choice">🎯 Trắc nghiệm 1 đáp án</option>
+                        <option value="true_false">⚖️ Đúng / Sai</option>
+                        <option value="essay">✍️ Tự luận / Trả lời ngắn</option>
+                        <option value="multiple_choice">📋 Trắc nghiệm nhiều đáp án</option>
+                    </select>
+
+
                     {/* Difficulty */}
 
                     <select
@@ -1438,11 +1627,6 @@ export default function TeacherQuestionManagementView({
                         </option>
 
                     </select>
-
-
-            
-
-             
 
                 </div>
 
@@ -1894,7 +2078,7 @@ export default function TeacherQuestionManagementView({
                                                                         py-4
                                                                         transition
                                                                         hover:bg-slate-50/70
-                                                                        lg:grid-cols-[minmax(0,1fr)_150px_170px_auto]
+                                                                        lg:grid-cols-[minmax(0,1fr)_120px_160px_auto]
                                                                         lg:items-center
                                                                     "
                                                                 >
@@ -1928,7 +2112,7 @@ export default function TeacherQuestionManagementView({
                                                                             {questionIndex + 1}
                                                                         </div>
 
-                                                                        <div className="min-w-0">
+                                                                        <div className="min-w-0 flex-1">
 
                                                                             <p
                                                                                 className="
@@ -1942,6 +2126,10 @@ export default function TeacherQuestionManagementView({
                                                                                 {question.text}
                                                                             </p>
 
+                                                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                                                <QuestionTypeBadge type={question.type} />
+                                                                                <QuestionAnswerSummary question={question} />
+                                                                            </div>
 
                                                                         </div>
 
@@ -2329,6 +2517,84 @@ export function mapQuestionDtoToQuestion(
     };
 }
 
+
+/* =========================================================
+   QUESTION TYPE BADGE
+========================================================= */
+
+function QuestionTypeBadge({ type }: { type?: QuestionType }) {
+    const qType = type || "single_choice";
+
+    if (qType === "true_false") {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 border border-purple-200/80 px-2.5 py-1 text-xs font-black text-purple-700 shadow-2xs">
+                <HelpCircle size={13} className="text-purple-600 shrink-0" />
+                Đúng / Sai
+            </span>
+        );
+    }
+    if (qType === "essay") {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 border border-amber-200/80 px-2.5 py-1 text-xs font-black text-amber-700 shadow-2xs">
+                <PenTool size={13} className="text-amber-600 shrink-0" />
+                Tự luận
+            </span>
+        );
+    }
+    if (qType === "multiple_choice") {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 text-xs font-black text-emerald-700 shadow-2xs">
+                <ListChecks size={13} className="text-emerald-600 shrink-0" />
+                Nhiều đáp án
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200/80 px-2.5 py-1 text-xs font-black text-blue-700 shadow-2xs">
+            <CheckSquare size={13} className="text-blue-600 shrink-0" />
+            Trắc nghiệm
+        </span>
+    );
+}
+
+/* =========================================================
+   QUESTION ANSWER SUMMARY
+========================================================= */
+
+function QuestionAnswerSummary({ question }: { question: Question }) {
+    const qType = question.type || "single_choice";
+
+    if (qType === "true_false") {
+        const rawAns = String(question.correctAnswer || "").trim().toUpperCase();
+        const isTrue = rawAns === "T" || rawAns === "TRUE" || rawAns === "A" || rawAns === "ĐÚNG";
+        return (
+            <span
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black ${
+                    isTrue
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                }`}
+            >
+                Đáp án: {isTrue ? "ĐÚNG" : "SAI"}
+            </span>
+        );
+    }
+
+    if (qType === "essay") {
+        const ans = String(question.correctAnswer || "").trim();
+        return (
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-800 max-w-[280px] truncate">
+                Từ khóa: <span className="font-black text-amber-900">{ans || "Chưa đặt"}</span>
+            </span>
+        );
+    }
+
+    return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-bold text-blue-800">
+            Đáp án: <span className="font-black text-blue-900">{String(question.correctAnswer || "")}</span>
+        </span>
+    );
+}
 
 /* =========================================================
    DIFFICULTY BADGE
@@ -3395,25 +3661,12 @@ function QuestionFormModal({
                     space-y-5
                 ">
 
-                        <div>
-
-                            <p className="
-                            text-xs
-                            font-bold
-                            uppercase
-                            text-slate-400
-                        ">
-                                Topic
-                            </p>
-
-                            <p className="
-                            mt-1
-                            font-bold
-                            text-blue-600
-                        ">
-                                {topicName}
-                            </p>
-
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 border border-blue-200">
+                                📚 {topicName}
+                            </span>
+                            <QuestionTypeBadge type={question.type} />
+                            <DifficultyBadge difficulty={question.difficulty} />
                         </div>
 
 
@@ -3444,83 +3697,93 @@ function QuestionFormModal({
                         </div>
 
 
-                        {question.options?.map(
-                            (option, index) => {
+                        {/* RENDER ANSWERS ACCORDING TO QUESTION TYPE */}
+                        {(() => {
+                            const qType = question.type || "single_choice";
 
-                                const label =
-                                    String.fromCharCode(
-                                        65 + index
-                                    );
-
-                                const correct =
-                                    Array.isArray(
-                                        question.correctAnswer
-                                    )
-                                        ? question.correctAnswer.includes(
-                                            label
-                                        )
-                                        : question.correctAnswer
-                                            .split(",")
-                                            .includes(label);
-
-
+                            // 1. TRUE / FALSE
+                            if (qType === "true_false") {
+                                const rawAns = String(question.correctAnswer || "").trim().toUpperCase();
+                                const isTrue = rawAns === "T" || rawAns === "TRUE" || rawAns === "A" || rawAns === "ĐÚNG";
                                 return (
-
-                                    <div
-                                        key={
-                                            index
-                                        }
-                                        className={`
-                                        rounded-xl
-                                        border
-                                        p-4
-                                        ${correct
-                                                ? "border-emerald-300 bg-emerald-50"
-                                                : "border-slate-200"
-                                            }
-                                    `}
-                                    >
-
-                                        <div className="
-                                        flex
-                                        items-center
-                                        gap-3
-                                    ">
-
-                                            <span className="
-                                            font-black
-                                            text-slate-700
-                                        ">
-                                                {label}.
-                                            </span>
-
-                                            <span className="
-                                            text-sm
-                                            text-slate-700
-                                        ">
-                                                {option}
-                                            </span>
-
-                                            {correct && (
-
-                                                <Check
-                                                    size={17}
-                                                    className="
-                                                    ml-auto
-                                                    text-emerald-600
-                                                "
-                                                />
-
-                                            )}
-
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold uppercase text-slate-400">
+                                            Đáp án Đúng / Sai
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div
+                                                className={`flex items-center justify-between rounded-2xl border-2 p-4 font-black transition ${
+                                                    isTrue
+                                                        ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                                                        : "border-slate-200 bg-slate-50/60 text-slate-400"
+                                                }`}
+                                            >
+                                                <span>ĐÚNG</span>
+                                                {isTrue && <Check size={18} className="text-emerald-600" />}
+                                            </div>
+                                            <div
+                                                className={`flex items-center justify-between rounded-2xl border-2 p-4 font-black transition ${
+                                                    !isTrue
+                                                        ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                                                        : "border-slate-200 bg-slate-50/60 text-slate-400"
+                                                }`}
+                                            >
+                                                <span>SAI</span>
+                                                {!isTrue && <Check size={18} className="text-emerald-600" />}
+                                            </div>
                                         </div>
-
                                     </div>
-
                                 );
-
                             }
-                        )}
+
+                            // 2. ESSAY
+                            if (qType === "essay") {
+                                return (
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold uppercase text-slate-400">
+                                            Đáp án tự luận / Từ khóa mẫu
+                                        </p>
+                                        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/60 p-4 font-bold text-amber-950">
+                                            {String(question.correctAnswer || "Chưa thiết lập đáp án")}
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            // 3. SINGLE OR MULTIPLE CHOICE
+                            return (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-bold uppercase text-slate-400">
+                                        Các lựa chọn đáp án
+                                    </p>
+                                    {question.options?.map((option, index) => {
+                                        const label = String.fromCharCode(65 + index);
+                                        const correct = Array.isArray(question.correctAnswer)
+                                            ? question.correctAnswer.includes(label)
+                                            : question.correctAnswer.split(",").includes(label);
+
+                                        return (
+                                            <div
+                                                key={index}
+                                                className={`rounded-xl border p-4 transition ${
+                                                    correct
+                                                        ? "border-emerald-300 bg-emerald-50 text-emerald-950"
+                                                        : "border-slate-200 bg-white text-slate-700"
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-black text-slate-700">{label}.</span>
+                                                    <span className="text-sm font-semibold text-slate-700">{option}</span>
+                                                    {correct && (
+                                                        <Check size={17} className="ml-auto text-emerald-600" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
 
 
                         {question.explanation && (
