@@ -47,27 +47,44 @@ public class GetChessQuestionsByTopicHandler
             throw new KeyNotFoundException("Topic không tồn tại hoặc đã bị khóa.");
         }
 
-        // Lấy tất cả câu hỏi Đúng / Sai (true_false) của chủ đề, không phân biệt độ khó
-        var tfQuestions = await _context.Questions
+        // Lấy tất cả câu hỏi của chủ đề để phục vụ các loại quân cờ:
+        // Tốt/Vua: Đúng-Sai | Mã/Tượng: Trắc nghiệm ABCD | Xe/Hậu: Tự luận
+        var allQuestions = await _context.Questions
             .AsNoTracking()
-            .Where(q => q.TopicId == request.TopicId && q.Type == "true_false")
+            .Where(q => q.TopicId == request.TopicId)
             .OrderBy(q => q.CreatedAt)
             .ThenBy(q => q.Id)
             .ToListAsync(cancellationToken);
 
         var result = new List<StudentChessQuestionDto>();
 
-        foreach (var q in tfQuestions)
+        foreach (var q in allQuestions)
         {
-            var normalized = QuestionAnswerHelper.NormalizeTrueFalseAnswer(q.CorrectAnswer);
-            if (normalized != "T" && normalized != "F") continue;
+            var type = (q.Type ?? "single_choice").ToLowerInvariant();
+            var isTrue = false;
+            var correctAnswer = q.CorrectAnswer?.Trim() ?? string.Empty;
+
+            if (type == "true_false")
+            {
+                var normalized = QuestionAnswerHelper.NormalizeTrueFalseAnswer(correctAnswer);
+                if (normalized == "T" || normalized == "F")
+                {
+                    isTrue = normalized == "T";
+                    correctAnswer = normalized;
+                }
+            }
 
             result.Add(new StudentChessQuestionDto
             {
                 Id = q.Id,
                 NoiDung = q.NoiDung,
-                IsTrue = normalized == "T",
-                CorrectAnswer = normalized,
+                Type = type,
+                OptionA = q.OptionA ?? string.Empty,
+                OptionB = q.OptionB ?? string.Empty,
+                OptionC = q.OptionC ?? string.Empty,
+                OptionD = q.OptionD ?? string.Empty,
+                IsTrue = isTrue,
+                CorrectAnswer = correctAnswer,
                 Explanation = q.Explanation,
                 TopicId = topic.Id,
                 TopicName = topic.Name

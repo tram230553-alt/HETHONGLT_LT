@@ -47,14 +47,14 @@ export interface QuestionDto {
 export interface CreateQuestionRequest {
     noiDung: string;
 
-    optionA: string;
-    optionB: string;
-    optionC: string;
-    optionD: string;
+    optionA?: string;
+    optionB?: string;
+    optionC?: string;
+    optionD?: string;
 
     correctAnswer: string;
-    type: "single_choice" | "multiple_choice" | "true_false" | "essay";
-    difficulty: "easy" | "medium" | "hard";
+    type?: "single_choice" | "multiple_choice" | "true_false" | "essay";
+    difficulty?: "easy" | "medium" | "hard";
 
     topicId: string;
 
@@ -69,14 +69,14 @@ export interface CreateQuestionRequest {
 export interface UpdateQuestionRequest {
     noiDung: string;
 
-    optionA: string;
-    optionB: string;
-    optionC: string;
-    optionD: string;
+    optionA?: string;
+    optionB?: string;
+    optionC?: string;
+    optionD?: string;
 
     correctAnswer: string;
-    type: "single_choice" | "multiple_choice" | "true_false" | "essay";
-    difficulty: "easy" | "medium" | "hard";
+    type?: "single_choice" | "multiple_choice" | "true_false" | "essay";
+    difficulty?: "easy" | "medium" | "hard";
 
     topicId: string;
 
@@ -462,7 +462,7 @@ function validateCreateRequest(
     request: CreateQuestionRequest
 ): void {
 
-    if (!request.noiDung.trim()) {
+    if (!request.noiDung?.trim()) {
         throw new Error(
             "Nội dung câu hỏi không được để trống."
         );
@@ -475,36 +475,46 @@ function validateCreateRequest(
         );
     }
 
+    const type = request.type ?? "single_choice";
 
-    if (!request.optionA.trim()) {
-        throw new Error(
-            "Đáp án A không được để trống."
-        );
+    if (type === "single_choice" || type === "multiple_choice") {
+        if (!request.optionA?.trim()) {
+            throw new Error(
+                "Đáp án A không được để trống."
+            );
+        }
+
+        if (!request.optionB?.trim()) {
+            throw new Error(
+                "Đáp án B không được để trống."
+            );
+        }
+
+        if (!request.optionC?.trim()) {
+            throw new Error(
+                "Đáp án C không được để trống."
+            );
+        }
+
+        if (!request.optionD?.trim()) {
+            throw new Error(
+                "Đáp án D không được để trống."
+            );
+        }
+    } else if (type === "true_false") {
+        if (!request.optionA?.trim()) request.optionA = "Đúng";
+        if (!request.optionB?.trim()) request.optionB = "Sai";
+        if (!request.optionC) request.optionC = "";
+        if (!request.optionD) request.optionD = "";
+    } else if (type === "essay") {
+        if (!request.optionA) request.optionA = "";
+        if (!request.optionB) request.optionB = "";
+        if (!request.optionC) request.optionC = "";
+        if (!request.optionD) request.optionD = "";
     }
 
 
-    if (!request.optionB.trim()) {
-        throw new Error(
-            "Đáp án B không được để trống."
-        );
-    }
-
-
-    if (!request.optionC.trim()) {
-        throw new Error(
-            "Đáp án C không được để trống."
-        );
-    }
-
-
-    if (!request.optionD.trim()) {
-        throw new Error(
-            "Đáp án D không được để trống."
-        );
-    }
-
-
-    if (!request.correctAnswer) {
+    if (!request.correctAnswer?.trim()) {
         throw new Error(
             "Vui lòng chọn đáp án đúng."
         );

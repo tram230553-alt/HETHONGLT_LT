@@ -53,6 +53,7 @@ interface PendingMove {
     from: Pos;
     to: Pos;
     piece: Piece;
+    question: ChessQuestionDto;
 }
 
 interface QuestionHistoryItem {
@@ -61,6 +62,41 @@ interface QuestionHistoryItem {
     questionText: string;
     correctAnswerLabel: string;
     isCorrect: boolean;
+}
+
+function normalizeText(s: string): string {
+    return s
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[.,/#!$%^&*;:{}=\-_`~()?"']/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function pickQuestionForPiece(
+    piece: Piece,
+    allQuestions: ChessQuestionDto[],
+    currentCursor: number,
+): ChessQuestionDto | null {
+    if (allQuestions.length === 0) return null;
+
+    let targetTypes: string[] = [];
+    if (piece.type === "p" || piece.type === "k") {
+        targetTypes = ["true_false"];
+    } else if (piece.type === "n" || piece.type === "b") {
+        targetTypes = ["single_choice", "multiple_choice"];
+    } else if (piece.type === "r" || piece.type === "q") {
+        targetTypes = ["essay"];
+    }
+
+    const matching = allQuestions.filter((q) => targetTypes.includes((q.type || "").toLowerCase()));
+    if (matching.length > 0) {
+        return matching[currentCursor % matching.length];
+    }
+
+    // Fallback: nếu chủ đề chưa có loại câu hỏi đó, sử dụng câu hỏi có sẵn
+    return allQuestions[currentCursor % allQuestions.length];
 }
 
 const PIECE_NAMES_VI: Record<PieceType, string> = {
@@ -444,11 +480,12 @@ export default function ChessPuzzleGameView({
     const [lastMove, setLastMove] = useState<{ from: Pos; to: Pos } | null>(null);
     const [isAiThinking, setIsAiThinking] = useState(false);
 
-    // Modal câu hỏi Đúng / Sai khi chọn 1 nước đi
+    // Modal câu hỏi khi chọn 1 nước đi (hỗ trợ Đúng/Sai, Trắc nghiệm ABCD, Tự luận)
     const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
     const [questionCursor, setQuestionCursor] = useState(0);
     const [modalTimeLeft, setModalTimeLeft] = useState(25);
     const [showHintInModal, setShowHintInModal] = useState(false);
+    const [essayInput, setEssayInput] = useState("");
 
     // Thống kê đúng/sai & thông báo
     const [correctCount, setCorrectCount] = useState(0);
@@ -468,7 +505,7 @@ export default function ChessPuzzleGameView({
         }, 2600);
     }, []);
 
-    // Load câu hỏi Đúng / Sai của chủ đề
+    // Load tất cả câu hỏi của chủ đề
     useEffect(() => {
         let mounted = true;
         const load = async () => {
@@ -481,7 +518,7 @@ export default function ChessPuzzleGameView({
                 }
             } catch (err) {
                 if (mounted) {
-                    setError(err instanceof Error ? err.message : "Không thể tải câu hỏi Đúng / Sai.");
+                    setError(err instanceof Error ? err.message : "Không thể tải câu hỏi của chủ đề.");
                 }
             } finally {
                 if (mounted) setLoading(false);
@@ -492,8 +529,6 @@ export default function ChessPuzzleGameView({
             mounted = false;
         };
     }, [topic.id]);
-
-    const currentQuestion = questions.length > 0 ? questions[questionCursor % questions.length] : null;
 
     // AI (Quân Đen) tự động đi sau khi học sinh trả lời đúng
     const triggerBlackAiMove = useCallback(
@@ -566,22 +601,59 @@ export default function ChessPuzzleGameView({
         [],
     );
 
-    // Xử lý khi học sinh trả lời ĐÚNG hoặc SAI trong Modal
+    // Xử lý khi học sinh trả lời câu hỏi (Đúng/Sai, Trắc nghiệm, Tự luận)
     const handleAnswerQuestion = useCallback(
-        (studentSaysTrue: boolean | null) => {
-            if (!pendingMove || !currentQuestion) return;
+        (studentAnswer: string | null) => {
+            if (!pendingMove) return;
 
+            const currentQ = pendingMove.question;
+            const qType = (currentQ.type || "true_false").toLowerCase();
             const moveLabel = `${PIECE_NAMES_VI[pendingMove.piece.type]} ${toAlgebraic(pendingMove.from)}→${toAlgebraic(pendingMove.to)}`;
-            const isCorrect = studentSaysTrue !== null && studentSaysTrue === currentQuestion.isTrue;
+
+            let isCorrect = false;
+            let correctAnswerLabel = "";
+
+            if (studentAnswer === null) {
+                // Hết giờ
+                isCorrect = false;
+                correctAnswerLabel =
+                    qType === "true_false"
+                        ? currentQ.isTrue ? "ĐÚNG" : "SAI"
+                        : currentQ.correctAnswer || "Hết giờ";
+            } else if (qType === "true_false") {
+                const expected = currentQ.isTrue ? "T" : "F";
+                isCorrect = studentAnswer.toUpperCase() === expected;
+                correctAnswerLabel = currentQ.isTrue ? "ĐÚNG" : "SAI";
+            } else if (qType === "single_choice" || qType === "multiple_choice") {
+                const expected = (currentQ.correctAnswer || "").trim().toUpperCase();
+                isCorrect = studentAnswer.trim().toUpperCase() === expected;
+                correctAnswerLabel = expected;
+            } else if (qType === "essay") {
+                const expected = currentQ.correctAnswer || "";
+                const normUser = normalizeText(studentAnswer);
+                const expectedVariants = expected
+                    .split(/[,;/|]/)
+                    .map((s) => normalizeText(s))
+                    .filter(Boolean);
+
+                if (expectedVariants.length > 0) {
+                    isCorrect = expectedVariants.some(
+                        (v) => v === normUser || (v.length >= 2 && normUser.includes(v)),
+                    );
+                } else {
+                    isCorrect = normalizeText(expected) === normUser;
+                }
+                correctAnswerLabel = expected;
+            }
 
             // Lưu vào lịch sử câu hỏi
             setHistoryResults((prev) => [
                 ...prev,
                 {
-                    id: `${currentQuestion.id}-${prev.length}`,
+                    id: `${currentQ.id}-${prev.length}`,
                     moveLabel,
-                    questionText: currentQuestion.questionText || currentQuestion.noiDung,
-                    correctAnswerLabel: currentQuestion.isTrue ? "ĐÚNG" : "SAI",
+                    questionText: currentQ.questionText || currentQ.noiDung,
+                    correctAnswerLabel,
                     isCorrect,
                 },
             ]);
@@ -601,6 +673,7 @@ export default function ChessPuzzleGameView({
                 setLegalMoves([]);
                 setPendingMove(null);
                 setShowHintInModal(false);
+                setEssayInput("");
 
                 showToast(`Chính xác! Đã đi ${moveLabel}`, "success");
 
@@ -614,16 +687,17 @@ export default function ChessPuzzleGameView({
                 setSelectedPos(null);
                 setLegalMoves([]);
                 setShowHintInModal(false);
+                setEssayInput("");
 
                 showToast(
-                    studentSaysTrue === null
+                    studentAnswer === null
                         ? `Hết giờ! Nước đi ${moveLabel} không được thực hiện.`
                         : `Trả lời sai! Quân cờ không được di chuyển.`,
                     "error",
                 );
             }
         },
-        [pendingMove, currentQuestion, board, onEarnGems, showToast, triggerBlackAiMove],
+        [pendingMove, board, onEarnGems, showToast, triggerBlackAiMove],
     );
 
     // Đếm ngược thời gian 25s khi Modal câu hỏi đang mở
@@ -653,11 +727,15 @@ export default function ChessPuzzleGameView({
         if (selectedPos && legalMoves.some((m) => m.r === r && m.c === c)) {
             const movingPiece = board[selectedPos.r][selectedPos.c];
             if (movingPiece) {
+                const targetQ = pickQuestionForPiece(movingPiece, questions, questionCursor);
+                if (!targetQ) return;
                 setShowHintInModal(false);
+                setEssayInput("");
                 setPendingMove({
                     from: selectedPos,
                     to: { r, c },
                     piece: movingPiece,
+                    question: targetQ,
                 });
                 return;
             }
@@ -677,7 +755,7 @@ export default function ChessPuzzleGameView({
 
     // Dùng 1 Sao tích lũy để gợi ý đáp án trong Modal
     const handleUseStarHint = () => {
-        if (showHintInModal || !currentQuestion) return;
+        if (showHintInModal || !pendingMove) return;
 
         if ((userStars ?? 0) < 1) {
             showToast("Bạn chưa đủ sao! Hãy học thêm bài học để tích lũy sao ⭐", "star");
@@ -727,7 +805,7 @@ export default function ChessPuzzleGameView({
         );
     }
 
-    // Không có câu hỏi Đúng / Sai
+    // Không có câu hỏi nào
     if (error || questions.length === 0) {
         return (
             <div className="flex h-full min-h-0 flex-col items-center justify-center bg-gradient-to-br from-[#f8eff8] via-[#eef3fb] to-[#eff9f6] p-6">
@@ -735,9 +813,9 @@ export default function ChessPuzzleGameView({
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 mb-4">
                         <AlertCircle className="h-8 w-8" />
                     </div>
-                    <h2 className="text-xl font-black text-slate-800">Chưa có câu hỏi Đúng / Sai</h2>
+                    <h2 className="text-xl font-black text-slate-800">Chưa có câu hỏi</h2>
                     <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                        {error || "Chủ đề này chưa có câu hỏi dạng Đúng / Sai (true_false) để tạo màn chơi Cờ vua giải đố."}
+                        {error || "Chủ đề này chưa có câu hỏi để tạo màn chơi Cờ vua giải đố."}
                     </p>
                     <button
                         type="button"
@@ -837,7 +915,7 @@ export default function ChessPuzzleGameView({
                     Cờ vua <span className="text-[#ec4899]">giải đố</span>
                 </h1>
                 <p className="mt-1 text-xs sm:text-sm font-medium text-slate-600 max-w-lg mx-auto leading-relaxed">
-                    Chọn nước đi, trả lời đúng câu hỏi Đúng / Sai thì quân mới được di chuyển, nếu trả lời sai thì mất nước đi đó.
+                    Chọn nước đi, trả lời đúng câu hỏi thì quân mới được di chuyển. Tốt/Vua: Đúng-Sai · Mã/Tượng: Trắc nghiệm · Xe/Hậu: Tự luận.
                 </p>
             </div>
 
@@ -854,11 +932,11 @@ export default function ChessPuzzleGameView({
                                     (lastMove?.to.r === r && lastMove?.to.c === c);
                                 const isLegalTarget = legalMoves.some((m) => m.r === r && m.c === c);
 
-                                let squareBg = isLight ? "bg-[#eeeed2]" : "bg-[#b5b9f5]";
+                                let squareBg = isLight ? "bg-[#e8ecfb]" : "bg-[#b8c5f8]";
                                 if (isSelected) {
-                                    squareBg = "bg-[#f7ec59]";
+                                    squareBg = "bg-[#fde047]";
                                 } else if (isLastMove) {
-                                    squareBg = "bg-[#b9f59f]";
+                                    squareBg = "bg-[#bbf7d0]";
                                 }
 
                                 return (
@@ -922,15 +1000,37 @@ export default function ChessPuzzleGameView({
                 </div>
             </main>
 
-            {/* TRUE / FALSE QUESTION MODAL ON MOVE (Exact match to Screenshot 2) */}
-            {pendingMove && currentQuestion && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-[4px] animate-fade-in">
-                    <div className="w-full max-w-[460px] rounded-[28px] bg-white p-6 sm:p-7 shadow-2xl border border-white/80">
-                        {/* Top Badges: Move Label & Countdown Timer */}
+            {/* QUESTION MODAL ON MOVE (Matches Screenshot 2 & Piece Type Rules) */}
+            {pendingMove && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-[4px] animate-fade-in">
+                    <div className="w-full max-w-[480px] rounded-[32px] bg-white p-6 sm:p-7 shadow-2xl border border-white/80">
+                        {/* Top Badges: Piece & Type Label + Countdown Timer */}
                         <div className="flex items-center justify-between gap-2">
-                            <span className="inline-flex items-center rounded-full bg-[#f3e8ff] px-3.5 py-1.5 text-xs font-black text-[#9333ea]">
-                                {PIECE_NAMES_VI[pendingMove.piece.type]} {toAlgebraic(pendingMove.from)}→{toAlgebraic(pendingMove.to)} · Đúng / Sai
-                            </span>
+                            {(() => {
+                                const pieceLabel = PIECE_NAMES_VI[pendingMove.piece.type];
+                                const moveNotation = `${toAlgebraic(pendingMove.from)}→${toAlgebraic(pendingMove.to)}`;
+                                const qType = (pendingMove.question.type || "true_false").toLowerCase();
+
+                                if (qType === "single_choice" || qType === "multiple_choice") {
+                                    return (
+                                        <span className="inline-flex items-center rounded-full bg-[#e0f2fe] px-3.5 py-1.5 text-xs font-black text-[#0284c7]">
+                                            {pieceLabel} {moveNotation} · Trắc nghiệm
+                                        </span>
+                                    );
+                                }
+                                if (qType === "essay") {
+                                    return (
+                                        <span className="inline-flex items-center rounded-full bg-[#fef3c7] px-3.5 py-1.5 text-xs font-black text-[#d97706]">
+                                            {pieceLabel} {moveNotation} · Tự luận
+                                        </span>
+                                    );
+                                }
+                                return (
+                                    <span className="inline-flex items-center rounded-full bg-[#f3e8ff] px-3.5 py-1.5 text-xs font-black text-[#9333ea]">
+                                        {pieceLabel} {moveNotation} · Đúng / Sai
+                                    </span>
+                                );
+                            })()}
 
                             <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-3 py-1.5 text-xs font-extrabold text-slate-600">
                                 <Clock className="h-3.5 w-3.5 text-slate-500" />
@@ -940,17 +1040,24 @@ export default function ChessPuzzleGameView({
 
                         {/* Question Statement */}
                         <h3 className="my-5 text-base sm:text-lg font-black text-slate-900 text-left leading-snug">
-                            {currentQuestion.questionText || currentQuestion.noiDung}
+                            {pendingMove.question.questionText || pendingMove.question.noiDung}
                         </h3>
 
                         {/* Star Hint Display if Activated */}
                         {showHintInModal ? (
                             <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 text-left">
                                 <p className="font-black">
-                                    💡 Gợi ý đáp án: <span className="text-amber-700 uppercase">{currentQuestion.isTrue ? "ĐÚNG" : "SAI"}</span>
+                                    💡 Gợi ý đáp án:{" "}
+                                    <span className="text-amber-700 uppercase">
+                                        {(pendingMove.question.type || "true_false").toLowerCase() === "true_false"
+                                            ? pendingMove.question.isTrue
+                                                ? "ĐÚNG"
+                                                : "SAI"
+                                            : pendingMove.question.correctAnswer}
+                                    </span>
                                 </p>
-                                {currentQuestion.explanation && (
-                                    <p className="mt-1 text-amber-800/90">{currentQuestion.explanation}</p>
+                                {pendingMove.question.explanation && (
+                                    <p className="mt-1 text-amber-800/90">{pendingMove.question.explanation}</p>
                                 )}
                             </div>
                         ) : (
@@ -966,24 +1073,91 @@ export default function ChessPuzzleGameView({
                             </div>
                         )}
 
-                        {/* TWO LARGE 3D BUTTONS: ĐÚNG & SAI (Exact match to Screenshot 2) */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <button
-                                type="button"
-                                onClick={() => handleAnswerQuestion(true)}
-                                className="w-full rounded-2xl bg-[#ccfbd9] hover:bg-[#bbf7cd] border-b-4 border-[#9ae6b4] py-4 text-base font-black text-[#1e4631] transition active:translate-y-0.5"
-                            >
-                                ĐÚNG
-                            </button>
+                        {/* ANSWER CONTROLS BY QUESTION TYPE */}
+                        {(() => {
+                            const qType = (pendingMove.question.type || "true_false").toLowerCase();
 
-                            <button
-                                type="button"
-                                onClick={() => handleAnswerQuestion(false)}
-                                className="w-full rounded-2xl bg-[#ffd8dc] hover:bg-[#ffc6cc] border-b-4 border-[#feb2b2] py-4 text-base font-black text-[#63252b] transition active:translate-y-0.5"
-                            >
-                                SAI
-                            </button>
-                        </div>
+                            // 1. TRUE / FALSE: Hai nút to ĐÚNG - SAI pastel 3D (Khớp ảnh 2)
+                            if (qType === "true_false") {
+                                return (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAnswerQuestion("T")}
+                                            className="w-full rounded-2xl bg-[#ccfbd9] hover:bg-[#bbf7cd] border-b-4 border-[#9ae6b4] py-4 text-base font-black text-[#1e4631] transition active:translate-y-0.5"
+                                        >
+                                            ĐÚNG
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAnswerQuestion("F")}
+                                            className="w-full rounded-2xl bg-[#ffd8dc] hover:bg-[#ffc6cc] border-b-4 border-[#feb2b2] py-4 text-base font-black text-[#63252b] transition active:translate-y-0.5"
+                                        >
+                                            SAI
+                                        </button>
+                                    </div>
+                                );
+                            }
+
+                            // 2. SINGLE / MULTIPLE CHOICE: 4 phương án A, B, C, D
+                            if (qType === "single_choice" || qType === "multiple_choice") {
+                                const options = [
+                                    { key: "A", text: pendingMove.question.optionA },
+                                    { key: "B", text: pendingMove.question.optionB },
+                                    { key: "C", text: pendingMove.question.optionC },
+                                    { key: "D", text: pendingMove.question.optionD },
+                                ].filter((opt) => opt.text && opt.text.trim().length > 0);
+
+                                return (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {options.map((opt) => (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                onClick={() => handleAnswerQuestion(opt.key)}
+                                                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 hover:bg-sky-50 hover:border-sky-300 border-2 border-slate-200 transition text-left active:scale-[0.98]"
+                                            >
+                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-sky-100 font-black text-xs text-sky-700">
+                                                    {opt.key}
+                                                </span>
+                                                <span className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                                                    {opt.text}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                );
+                            }
+
+                            // 3. ESSAY: Tự luận nhập câu trả lời ngắn
+                            return (
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        if (essayInput.trim()) {
+                                            handleAnswerQuestion(essayInput.trim());
+                                        }
+                                    }}
+                                    className="space-y-3"
+                                >
+                                    <input
+                                        type="text"
+                                        value={essayInput}
+                                        onChange={(e) => setEssayInput(e.target.value)}
+                                        placeholder="Nhập câu trả lời ngắn của bạn..."
+                                        autoFocus
+                                        className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:bg-white focus:outline-none"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!essayInput.trim()}
+                                        className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 border-b-4 border-amber-700 py-3.5 text-sm font-black text-white shadow-sm transition disabled:opacity-50 active:translate-y-0.5"
+                                    >
+                                        XÁC NHẬN CÂU TRẢ LỜI
+                                    </button>
+                                </form>
+                            );
+                        })()}
                     </div>
                 </div>
             )}

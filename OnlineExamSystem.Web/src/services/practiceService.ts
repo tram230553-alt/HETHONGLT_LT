@@ -38,13 +38,18 @@ export interface WordPuzzleQuestionDto {
 }
 
 /* =========================================================
-   CHESS PUZZLE (TRUE / FALSE QUESTIONS)
+   CHESS PUZZLE (TRUE / FALSE, MULTIPLE CHOICE, ESSAY)
 ========================================================= */
 
 export interface ChessQuestionDto {
     id: string;
     noiDung: string;
     questionText: string;
+    type?: "true_false" | "single_choice" | "multiple_choice" | "essay" | string;
+    optionA?: string;
+    optionB?: string;
+    optionC?: string;
+    optionD?: string;
     isTrue: boolean;
     correctAnswer: string;
     explanation?: string | null;

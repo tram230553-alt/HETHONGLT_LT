@@ -722,27 +722,21 @@ export default function TeacherQuestionManagementView({
                 modalMode === "add"
             ) {
 
+                const optA = editorType === "true_false" ? (editorOptions[0]?.trim() || "Đúng") : (editorOptions[0]?.trim() ?? "");
+                const optB = editorType === "true_false" ? (editorOptions[1]?.trim() || "Sai") : (editorOptions[1]?.trim() ?? "");
+                const optC = editorType === "true_false" ? "" : (editorOptions[2]?.trim() ?? "");
+                const optD = editorType === "true_false" ? "" : (editorOptions[3]?.trim() ?? "");
+
                 const request:
                     CreateQuestionRequest = {
 
                     noiDung:
                         editorText.trim(),
 
-                    optionA:
-                        editorOptions[0]
-                            ?.trim() ?? "",
-
-                    optionB:
-                        editorOptions[1]
-                            ?.trim() ?? "",
-
-                    optionC:
-                        editorOptions[2]
-                            ?.trim() ?? "",
-
-                    optionD:
-                        editorOptions[3]
-                            ?.trim() ?? "",
+                    optionA: optA,
+                    optionB: optB,
+                    optionC: optC,
+                    optionD: optD,
 
                     correctAnswer:
                         editorCorrectAnswer,
@@ -798,6 +792,10 @@ export default function TeacherQuestionManagementView({
                     );
                 }
 
+                const optA = editorType === "true_false" ? (editorOptions[0]?.trim() || "Đúng") : (editorOptions[0]?.trim() ?? "");
+                const optB = editorType === "true_false" ? (editorOptions[1]?.trim() || "Sai") : (editorOptions[1]?.trim() ?? "");
+                const optC = editorType === "true_false" ? "" : (editorOptions[2]?.trim() ?? "");
+                const optD = editorType === "true_false" ? "" : (editorOptions[3]?.trim() ?? "");
 
                 const request:
                     UpdateQuestionRequest = {
@@ -805,21 +803,10 @@ export default function TeacherQuestionManagementView({
                     noiDung:
                         editorText.trim(),
 
-                    optionA:
-                        editorOptions[0]
-                            ?.trim() ?? "",
-
-                    optionB:
-                        editorOptions[1]
-                            ?.trim() ?? "",
-
-                    optionC:
-                        editorOptions[2]
-                            ?.trim() ?? "",
-
-                    optionD:
-                        editorOptions[3]
-                            ?.trim() ?? "",
+                    optionA: optA,
+                    optionB: optB,
+                    optionC: optC,
+                    optionD: optD,
 
                     correctAnswer:
                         editorCorrectAnswer,
