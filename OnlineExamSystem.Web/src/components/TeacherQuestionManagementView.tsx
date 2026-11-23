@@ -2053,9 +2053,8 @@ export default function TeacherQuestionManagementView({
                                                                                 {question.text}
                                                                             </p>
 
-                                                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                                            <div className="mt-1.5 flex items-center gap-2">
                                                                                 <QuestionTypeBadge type={question.type} />
-                                                                                <QuestionAnswerSummary question={question} />
                                                                             </div>
 
                                                                         </div>
@@ -2480,45 +2479,6 @@ function QuestionTypeBadge({ type }: { type?: QuestionType }) {
         <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200/80 px-2.5 py-1 text-xs font-black text-blue-700 shadow-2xs">
             <CheckSquare size={13} className="text-blue-600 shrink-0" />
             Trắc nghiệm
-        </span>
-    );
-}
-
-/* =========================================================
-   QUESTION ANSWER SUMMARY
-========================================================= */
-
-function QuestionAnswerSummary({ question }: { question: Question }) {
-    const qType = question.type || "single_choice";
-
-    if (qType === "true_false") {
-        const rawAns = String(question.correctAnswer || "").trim().toUpperCase();
-        const isTrue = rawAns === "T" || rawAns === "TRUE" || rawAns === "A" || rawAns === "ĐÚNG";
-        return (
-            <span
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-black ${
-                    isTrue
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-rose-50 text-rose-700 border border-rose-200"
-                }`}
-            >
-                Đáp án: {isTrue ? "ĐÚNG" : "SAI"}
-            </span>
-        );
-    }
-
-    if (qType === "essay") {
-        const ans = String(question.correctAnswer || "").trim();
-        return (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-800 max-w-[280px] truncate">
-                Từ khóa: <span className="font-black text-amber-900">{ans || "Chưa đặt"}</span>
-            </span>
-        );
-    }
-
-    return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-bold text-blue-800">
-            Đáp án: <span className="font-black text-blue-900">{String(question.correctAnswer || "")}</span>
         </span>
     );
 }
