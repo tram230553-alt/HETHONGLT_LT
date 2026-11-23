@@ -27,8 +27,6 @@ import {
 } from "../../services/practiceService";
 import ChessPuzzleGameView from "./ChessPuzzleGameView";
 import WordPuzzleGameView from "./WordPuzzleGameView";
-import GoldMinerGameView from "./GoldMinerGameView";
-import GamifiedQuizView from "./GamifiedQuizView";
 
 /* =========================================================
    PROPS
@@ -46,7 +44,7 @@ interface GamePracticeTabProps {
    GAME MODE DEFINITIONS (Exact match to uploaded image)
 ========================================================= */
 
-export type GameModeId = "mc" | "tf" | "essay" | "gold" | "word" | "chess";
+export type GameModeId = "chess" | "word";
 
 interface GameModeConfig {
     id: GameModeId;
@@ -64,56 +62,17 @@ interface GameModeConfig {
 
 const GAME_MODES: GameModeConfig[] = [
     {
-        id: "mc",
-        title: "Trắc nghiệm",
-        description: "Chọn đáp án đúng nhất",
+        id: "chess",
+        title: "Cờ vua",
+        description: "Mỗi nước đi một câu hỏi",
         badgeText: "🏅 0 câu",
-        icon: "🎯",
-        cardBg: "bg-[#f3e8ff]",
-        border: "border-[#e9d5ff]",
-        iconBg: "bg-purple-200/60 text-purple-700",
-        textColor: "text-purple-900",
-        descColor: "text-purple-700/80",
-        btnColor: "text-purple-700",
-    },
-    {
-        id: "tf",
-        title: "Đúng / Sai",
-        description: "Phản xạ siêu tốc",
-        badgeText: "🏅 0 câu",
-        icon: "⚡",
-        cardBg: "bg-[#dcfce7]",
-        border: "border-[#bbf7d0]",
-        iconBg: "bg-emerald-200/60 text-emerald-700",
-        textColor: "text-emerald-900",
-        descColor: "text-emerald-700/80",
-        btnColor: "text-emerald-700",
-    },
-    {
-        id: "essay",
-        title: "Tự luận",
-        description: "Viết câu trả lời của bạn",
-        badgeText: "🏅 0 câu",
-        icon: "✍️",
-        cardBg: "bg-[#ffedd5]",
-        border: "border-[#fed7aa]",
-        iconBg: "bg-orange-200/60 text-orange-700",
-        textColor: "text-orange-900",
-        descColor: "text-orange-700/80",
-        btnColor: "text-orange-700",
-    },
-    {
-        id: "gold",
-        title: "Đào vàng",
-        description: "Móc vàng, trả lời câu hỏi",
-        badgeText: "🏅 0 điểm",
-        icon: "⛏️",
-        cardBg: "bg-[#fef9c3]",
-        border: "border-[#fef08a]",
-        iconBg: "bg-yellow-200/60 text-yellow-800",
-        textColor: "text-yellow-900",
-        descColor: "text-yellow-700/80",
-        btnColor: "text-yellow-800",
+        icon: "♟️",
+        cardBg: "bg-[#e0e7ff]",
+        border: "border-[#c7d2fe]",
+        iconBg: "bg-indigo-200/60 text-indigo-700",
+        textColor: "text-indigo-900",
+        descColor: "text-indigo-700/80",
+        btnColor: "text-indigo-700",
     },
     {
         id: "word",
@@ -127,19 +86,6 @@ const GAME_MODES: GameModeConfig[] = [
         textColor: "text-rose-900",
         descColor: "text-rose-700/80",
         btnColor: "text-rose-700",
-    },
-    {
-        id: "chess",
-        title: "Cờ vua",
-        description: "Mỗi nước đi một câu hỏi",
-        badgeText: "🏅 0 câu",
-        icon: "♟️",
-        cardBg: "bg-[#e0e7ff]",
-        border: "border-[#c7d2fe]",
-        iconBg: "bg-indigo-200/60 text-indigo-700",
-        textColor: "text-indigo-900",
-        descColor: "text-indigo-700/80",
-        btnColor: "text-indigo-700",
     },
 ];
 
@@ -380,25 +326,12 @@ export default function GamePracticeTab({
                 return;
             }
 
-            // 2. Nếu là Cờ vua, Đào vàng, Trắc nghiệm, Đúng/Sai, Tự luận:
+            // 2. Nếu là game Cờ vua:
             const promises = matchedTopics.map((t) =>
                 practiceService.getChessQuestions(t.id).catch(() => []),
             );
             const results = await Promise.all(promises);
-            let allQuestions = results.flat();
-
-            if (selectedGameId === "mc") {
-                const filtered = allQuestions.filter(
-                    (q) => q.type === "single_choice" || q.type === "multiple_choice",
-                );
-                if (filtered.length > 0) allQuestions = filtered;
-            } else if (selectedGameId === "tf") {
-                const filtered = allQuestions.filter((q) => q.type === "true_false");
-                if (filtered.length > 0) allQuestions = filtered;
-            } else if (selectedGameId === "essay") {
-                const filtered = allQuestions.filter((q) => q.type === "essay");
-                if (filtered.length > 0) allQuestions = filtered;
-            }
+            const allQuestions = results.flat();
 
             if (allQuestions.length === 0) {
                 setPrepareError("Chưa có câu hỏi phù hợp trong các môn đã chọn. Vui lòng chọn môn khác!");
@@ -409,8 +342,8 @@ export default function GamePracticeTab({
             const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
 
             setActiveRunningGame({
-                mode: selectedGameId,
-                title: `${GAME_MODES.find((g) => g.id === selectedGameId)?.title || "Luyện tập"}: ${selectedNames}`,
+                mode: "chess",
+                title: `Cờ vua: ${selectedNames}`,
                 dummyTopic,
                 chessQuestions: shuffled,
             });
@@ -454,26 +387,11 @@ export default function GamePracticeTab({
             );
         }
 
-        if (activeRunningGame.mode === "gold") {
-            return (
-                <GoldMinerGameView
-                    topic={activeRunningGame.dummyTopic}
-                    customQuestions={activeRunningGame.chessQuestions}
-                    customTitle={activeRunningGame.title}
-                    onBack={() => setActiveRunningGame(null)}
-                    userStars={userStars}
-                    onEarnGems={onEarnGems}
-                    onUseStars={onUseStars}
-                />
-            );
-        }
-
-        // Trắc nghiệm, Đúng/Sai, Tự luận
         return (
-            <GamifiedQuizView
-                mode={activeRunningGame.mode as "mc" | "tf" | "essay"}
-                title={activeRunningGame.title}
-                questions={activeRunningGame.chessQuestions || []}
+            <ChessPuzzleGameView
+                topic={activeRunningGame.dummyTopic}
+                customQuestions={activeRunningGame.chessQuestions}
+                customTitle={activeRunningGame.title}
                 onBack={() => setActiveRunningGame(null)}
                 userStars={userStars}
                 onEarnGems={onEarnGems}
@@ -633,45 +551,55 @@ export default function GamePracticeTab({
     }
 
     /* =========================================================
-       BƯỚC 1: HIỂN THỊ CÁC GAME LUYỆN TẬP ĐẦU TIÊN (Exact Match)
+       BƯỚC 1: HIỂN THỊ CÁC GAME LUYỆN TẬP ĐẦU TIÊN
     ========================================================= */
     return (
         <div className="h-full min-h-0 overflow-y-auto no-scrollbar bg-[var(--theme-bg)] p-4 md:p-8">
             <div className="mx-auto max-w-4xl">
-                {/* 6 Thẻ Game dạng lưới 2x3 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+                {/* TIÊU ĐỀ: GAME LUYỆN TẬP (Khớp kiểu ảnh Góc Luyện tập) */}
+                <div className="text-center my-6 md:my-10">
+                    <h1 className="text-3xl md:text-5xl font-black tracking-tight text-[#1e293b]">
+                        Game <span className="text-[#ff2b98]">Luyện tập</span>
+                    </h1>
+                    <p className="mt-2.5 text-xs md:text-sm font-semibold text-slate-500">
+                        Chọn trò chơi bạn muốn tham gia để bắt đầu ôn luyện kiến thức!
+                    </p>
+                </div>
+
+                {/* Các Thẻ Game có sẵn (Cờ vua & Nối chữ) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 max-w-2xl mx-auto">
                     {GAME_MODES.map((game) => (
                         <div
                             key={game.id}
-                            className={`group relative flex flex-col justify-between p-6 rounded-[28px] border-2 ${game.border} ${game.cardBg} shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md`}
+                            className={`group relative flex flex-col justify-between p-6 md:p-7 rounded-[28px] border-2 ${game.border} ${game.cardBg} shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md`}
                         >
                             {/* Icon phía trên bên trái */}
                             <div className="mb-4">
-                                <span className="text-3xl md:text-4xl block leading-none">
+                                <span className="text-4xl md:text-5xl block leading-none">
                                     {game.icon}
                                 </span>
                             </div>
 
                             {/* Tên game & mô tả */}
                             <div className="flex-1">
-                                <h2 className={`text-xl font-black ${game.textColor} leading-tight`}>
+                                <h2 className={`text-xl md:text-2xl font-black ${game.textColor} leading-tight`}>
                                     {game.title}
                                 </h2>
-                                <p className={`mt-1.5 text-xs md:text-sm font-semibold ${game.descColor}`}>
+                                <p className={`mt-2 text-xs md:text-sm font-semibold ${game.descColor}`}>
                                     {game.description}
                                 </p>
                             </div>
 
                             {/* Footer thẻ: Badge thành tích & Nút Chọn → */}
                             <div className="mt-6 flex items-center justify-between pt-2">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-black text-slate-700 shadow-xs backdrop-blur-xs">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3.5 py-1 text-xs font-black text-slate-700 shadow-xs backdrop-blur-xs">
                                     {game.badgeText}
                                 </span>
 
                                 <button
                                     type="button"
                                     onClick={() => setSelectedGameId(game.id)}
-                                    className={`inline-flex items-center gap-1 rounded-full bg-white px-4 py-1.5 text-xs font-black ${game.btnColor} shadow-xs hover:bg-white/95 active:scale-95 transition-all`}
+                                    className={`inline-flex items-center gap-1 rounded-full bg-white px-5 py-2 text-xs font-black ${game.btnColor} shadow-xs hover:bg-white/95 active:scale-95 transition-all`}
                                 >
                                     <span>Chọn</span>
                                     <span>→</span>

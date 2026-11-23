@@ -301,7 +301,7 @@ class ChessSounds {
             if (AudioCtx) this.ctx = new AudioCtx();
         }
         if (this.ctx && this.ctx.state === "suspended") {
-            this.ctx.resume().catch(() => {});
+            this.ctx.resume().catch(() => { });
         }
         return this.ctx;
     }
@@ -846,13 +846,12 @@ export default function ChessPuzzleGameView({
             {/* TOAST NOTIFICATION */}
             {toastMsg && (
                 <div
-                    className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-2xl px-5 py-2.5 text-xs font-black shadow-xl backdrop-blur-md animate-fade-in flex items-center gap-2 ${
-                        toastMsg.type === "success"
-                            ? "bg-emerald-600 text-white"
-                            : toastMsg.type === "error"
+                    className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-2xl px-5 py-2.5 text-xs font-black shadow-xl backdrop-blur-md animate-fade-in flex items-center gap-2 ${toastMsg.type === "success"
+                        ? "bg-emerald-600 text-white"
+                        : toastMsg.type === "error"
                             ? "bg-rose-600 text-white"
                             : "bg-slate-900 text-amber-300"
-                    }`}
+                        }`}
                 >
                     {toastMsg.type === "success" && <CheckCircle2 className="h-4 w-4 shrink-0" />}
                     {toastMsg.type === "error" && <XCircle className="h-4 w-4 shrink-0" />}
@@ -957,9 +956,8 @@ export default function ChessPuzzleGameView({
                                         {/* Rank Number (8..1) on Column a */}
                                         {c === 0 && (
                                             <span
-                                                className={`pointer-events-none absolute top-0.5 left-1 text-[9px] sm:text-[10px] font-bold leading-none ${
-                                                    isLight ? "text-slate-500" : "text-slate-600"
-                                                }`}
+                                                className={`pointer-events-none absolute top-0.5 left-1 text-[9px] sm:text-[10px] font-bold leading-none ${isLight ? "text-slate-500" : "text-slate-600"
+                                                    }`}
                                             >
                                                 {8 - r}
                                             </span>
@@ -968,9 +966,8 @@ export default function ChessPuzzleGameView({
                                         {/* File Letter (a..h) on Row 1 */}
                                         {r === 7 && (
                                             <span
-                                                className={`pointer-events-none absolute bottom-0.5 right-1 text-[9px] sm:text-[10px] font-bold leading-none ${
-                                                    isLight ? "text-slate-500" : "text-slate-600"
-                                                }`}
+                                                className={`pointer-events-none absolute bottom-0.5 right-1 text-[9px] sm:text-[10px] font-bold leading-none ${isLight ? "text-slate-500" : "text-slate-600"
+                                                    }`}
                                             >
                                                 {"abcdefgh"[c]}
                                             </span>
@@ -1239,9 +1236,8 @@ export default function ChessPuzzleGameView({
                                             </span>
                                         </div>
                                         <span
-                                            className={`font-black uppercase shrink-0 ${
-                                                item.isCorrect ? "text-emerald-600" : "text-rose-500"
-                                            }`}
+                                            className={`font-black uppercase shrink-0 ${item.isCorrect ? "text-emerald-600" : "text-rose-500"
+                                                }`}
                                         >
                                             {item.correctAnswerLabel}
                                         </span>
