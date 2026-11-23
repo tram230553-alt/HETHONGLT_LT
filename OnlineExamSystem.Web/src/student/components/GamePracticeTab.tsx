@@ -227,7 +227,7 @@ export default function GamePracticeTab({ onSelectWordGame }: GamePracticeTabPro
                     </div>
 
                     {/* Grid các môn học */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+                    <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                         {subjects.map((sub, idx) => {
                             const Icon = sub.icon;
                             return (
@@ -235,29 +235,29 @@ export default function GamePracticeTab({ onSelectWordGame }: GamePracticeTabPro
                                     key={sub.id}
                                     type="button"
                                     onClick={() => setSelectedSubjectId(sub.id)}
-                                    className={`group text-left relative flex flex-col justify-between p-5 rounded-3xl border-2 bg-gradient-to-br ${sub.gradient} shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md active:scale-[0.99]`}
+                                    className={`group text-left relative flex flex-col justify-between p-3.5 rounded-2xl border-2 bg-gradient-to-br ${sub.gradient} shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md active:scale-[0.99]`}
                                 >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-100 group-hover:scale-110 transition duration-200">
-                                            <Icon className="h-6 w-6 text-slate-800" />
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-xs border border-slate-100 group-hover:scale-105 transition duration-200 shrink-0">
+                                            <Icon className="h-5 w-5 text-slate-800" />
                                         </div>
-                                        <span className={`rounded-full px-3 py-1 text-xs font-black ${sub.badgeColor}`}>
-                                            {sub.topicCount} chủ đề game
+                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black shrink-0 ${sub.badgeColor}`}>
+                                            {sub.topicCount} bài
                                         </span>
                                     </div>
 
-                                    <div className="mt-6">
-                                        <h3 className="text-lg font-black text-slate-900 group-hover:text-amber-600 transition">
+                                    <div className="mt-4">
+                                        <h3 className="text-sm font-black text-slate-900 group-hover:text-amber-600 transition truncate" title={sub.name}>
                                             {sub.name}
                                         </h3>
-                                        <p className="mt-1 text-xs text-slate-500 line-clamp-2">
-                                            Các game nối chữ, thử thách câu hỏi ngắn theo từng bài học.
+                                        <p className="mt-1 text-[11px] text-slate-500 truncate">
+                                            Game nối từ & câu hỏi ngắn
                                         </p>
                                     </div>
 
-                                    <div className="mt-5 flex items-center justify-between border-t border-slate-100/80 pt-3 text-xs font-extrabold text-amber-600">
-                                        <span>Chọn game môn này</span>
-                                        <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+                                    <div className="mt-3 flex items-center justify-between border-t border-slate-100/80 pt-2 text-xs font-extrabold text-amber-600">
+                                        <span>Chọn game</span>
+                                        <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition" />
                                     </div>
                                 </button>
                             );

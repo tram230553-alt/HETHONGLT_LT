@@ -762,10 +762,10 @@ export default function TopicTab({
                 <div className="mx-auto max-w-[1450px] animate-pulse">
                     <div className="mb-6 h-8 w-56 rounded-xl bg-slate-200" />
 
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                         {Array.from(
                             {
-                                length: 8,
+                                length: 12,
                             },
                         ).map(
                             (
@@ -776,7 +776,7 @@ export default function TopicTab({
                                     key={
                                         index
                                     }
-                                    className="h-[240px] rounded-[24px] bg-slate-100"
+                                    className="h-[185px] rounded-[20px] bg-slate-100"
                                 />
                             ),
                         )}
@@ -867,11 +867,12 @@ export default function TopicTab({
                     <div
                         className="
                             grid
-                            grid-cols-1
-                            gap-6
-                            sm:grid-cols-2
-                            lg:grid-cols-3
-                            xl:grid-cols-4
+                            grid-cols-2
+                            gap-3.5
+                            sm:grid-cols-3
+                            md:grid-cols-4
+                            lg:grid-cols-5
+                            xl:grid-cols-6
                         "
                     >
                         {subjects.map(
@@ -912,16 +913,16 @@ export default function TopicTab({
                                         className="
                                             group
                                             overflow-hidden
-                                            rounded-[26px]
+                                            rounded-[20px]
                                             border
                                             border-slate-100
                                             bg-white
                                             text-left
-                                            shadow-[0_6px_24px_rgba(15,23,42,0.06)]
+                                            shadow-[0_4px_16px_rgba(15,23,42,0.05)]
                                             transition
                                             duration-200
                                             hover:-translate-y-1
-                                            hover:shadow-[0_14px_35px_rgba(15,23,42,0.10)]
+                                            hover:shadow-[0_10px_25px_rgba(15,23,42,0.08)]
                                         "
                                     >
                                         {/* IMAGE-LIKE AREA */}
@@ -930,7 +931,7 @@ export default function TopicTab({
                                             className={`
                                                 relative
                                                 flex
-                                                h-[160px]
+                                                h-[105px]
                                                 items-center
                                                 justify-center
                                                 overflow-hidden
@@ -938,19 +939,19 @@ export default function TopicTab({
                                                 ${theme.wrapper}
                                             `}
                                         >
-                                            <div className="absolute -left-9 -top-9 h-28 w-28 rounded-full bg-white/70" />
+                                            <div className="absolute -left-5 -top-5 h-16 w-16 rounded-full bg-white/70" />
 
-                                            <div className="absolute -bottom-14 -right-10 h-40 w-40 rounded-full bg-white/60" />
+                                            <div className="absolute -bottom-8 -right-6 h-24 w-24 rounded-full bg-white/60" />
 
                                             <div
                                                 className={`
                                                     relative
                                                     flex
-                                                    h-24
-                                                    w-24
+                                                    h-14
+                                                    w-14
                                                     items-center
                                                     justify-center
-                                                    rounded-[30px]
+                                                    rounded-[20px]
                                                     ${theme.icon}
                                                     shadow-sm
                                                     transition
@@ -959,32 +960,32 @@ export default function TopicTab({
                                                     group-hover:rotate-3
                                                 `}
                                             >
-                                                <Icon className="h-12 w-12" />
+                                                <Icon className="h-7 w-7" />
                                             </div>
                                         </div>
 
                                         {/* CONTENT */}
 
-                                        <div className="p-5">
-                                            <h2 className="text-xl font-black text-[#202026]">
+                                        <div className="p-3.5">
+                                            <h2 className="truncate text-sm font-black text-[#202026] md:text-base" title={subject.name}>
                                                 {
                                                     subject.name
                                                 }
                                             </h2>
 
-                                            <p className="mt-3 min-h-[44px] text-sm leading-6 text-slate-500">
+                                            <p className="mt-1 truncate text-xs text-slate-500">
                                                 {
                                                     subjectTopicsCount
                                                 }{" "}
-                                                bài luyện tập theo chương
+                                                bài luyện tập
                                             </p>
 
-                                            <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-                                                <span className="text-sm font-bold text-orange-500">
+                                            <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-xs font-bold text-orange-500">
+                                                <span>
                                                     Xem bài tập
                                                 </span>
 
-                                                <ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:translate-x-1 group-hover:text-orange-500" />
+                                                <ChevronRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-orange-500" />
                                             </div>
                                         </div>
                                     </button>
