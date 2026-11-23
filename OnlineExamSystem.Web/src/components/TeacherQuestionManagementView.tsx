@@ -1350,111 +1350,38 @@ export default function TeacherQuestionManagementView({
 
 
             {/* =========================================
-                QUESTION TYPE CATEGORIZATION CARDS
+                QUESTION TYPE CATEGORIZATION TABS (COMPACT)
             ========================================= */}
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 {[
-                    {
-                        key: "all",
-                        label: "Tất cả câu hỏi",
-                        count: typeStats.total,
-                        icon: Layers,
-                        borderActive: "border-slate-800 bg-slate-900 text-white shadow-md shadow-slate-900/10",
-                        borderNormal: "border-slate-200 bg-white hover:border-slate-300 text-slate-700",
-                        badgeNormal: "bg-slate-100 text-slate-800",
-                        badgeActive: "bg-white/20 text-white",
-                        iconColor: "text-slate-600",
-                    },
-                    {
-                        key: "single_choice",
-                        label: "Trắc nghiệm 1 ĐA",
-                        count: typeStats.singleChoice,
-                        icon: CheckSquare,
-                        borderActive: "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-500/20",
-                        borderNormal: "border-blue-100 bg-blue-50/40 hover:border-blue-300 text-blue-950",
-                        badgeNormal: "bg-blue-100 text-blue-700",
-                        badgeActive: "bg-white/25 text-white",
-                        iconColor: "text-blue-600",
-                    },
-                    {
-                        key: "true_false",
-                        label: "Đúng / Sai",
-                        count: typeStats.trueFalse,
-                        icon: HelpCircle,
-                        borderActive: "border-purple-600 bg-purple-600 text-white shadow-md shadow-purple-500/20",
-                        borderNormal: "border-purple-100 bg-purple-50/40 hover:border-purple-300 text-purple-950",
-                        badgeNormal: "bg-purple-100 text-purple-700",
-                        badgeActive: "bg-white/25 text-white",
-                        iconColor: "text-purple-600",
-                    },
-                    {
-                        key: "essay",
-                        label: "Tự luận",
-                        count: typeStats.essay,
-                        icon: PenTool,
-                        borderActive: "border-amber-600 bg-amber-600 text-white shadow-md shadow-amber-500/20",
-                        borderNormal: "border-amber-100 bg-amber-50/40 hover:border-amber-300 text-amber-950",
-                        badgeNormal: "bg-amber-100 text-amber-700",
-                        badgeActive: "bg-white/25 text-white",
-                        iconColor: "text-amber-600",
-                    },
-                    {
-                        key: "multiple_choice",
-                        label: "Nhiều đáp án",
-                        count: typeStats.multipleChoice,
-                        icon: ListChecks,
-                        borderActive: "border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-500/20",
-                        borderNormal: "border-emerald-100 bg-emerald-50/40 hover:border-emerald-300 text-emerald-950",
-                        badgeNormal: "bg-emerald-100 text-emerald-700",
-                        badgeActive: "bg-white/25 text-white",
-                        iconColor: "text-emerald-600",
-                    },
+                    { key: "all", label: "Tất cả", count: typeStats.total },
+                    { key: "single_choice", label: "Trắc nghiệm", count: typeStats.singleChoice },
+                    { key: "true_false", label: "Đúng / Sai", count: typeStats.trueFalse },
+                    { key: "essay", label: "Tự luận", count: typeStats.essay },
+                    { key: "multiple_choice", label: "Nhiều đáp án", count: typeStats.multipleChoice },
                 ].map((item) => {
                     const isActive = typeFilter === item.key;
-                    const IconComponent = item.icon;
                     return (
                         <button
                             key={item.key}
                             type="button"
                             onClick={() => setTypeFilter(item.key)}
-                            className={`group relative flex flex-col justify-between rounded-2xl border-2 p-3.5 sm:p-4 text-left transition-all active:scale-[0.98] ${
-                                isActive ? item.borderActive : item.borderNormal
+                            className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-left border transition-all active:scale-[0.98] ${
+                                isActive
+                                    ? "bg-blue-600 border-blue-600 text-white shadow-xs"
+                                    : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 text-slate-700"
                             }`}
                         >
-                            <div className="flex items-center justify-between gap-2">
-                                <span
-                                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
-                                        isActive
-                                            ? "bg-white/20 text-white"
-                                            : "bg-white shadow-2xs " + item.iconColor
-                                    }`}
-                                >
-                                    <IconComponent size={16} />
-                                </span>
-                                <span
-                                    className={`rounded-full px-2.5 py-0.5 text-xs font-black transition ${
-                                        isActive ? item.badgeActive : item.badgeNormal
-                                    }`}
-                                >
-                                    {item.count}
-                                </span>
-                            </div>
-                            <div className="mt-3">
-                                <p
-                                    className={`text-xs font-black tracking-tight ${
-                                        isActive ? "text-white" : "text-slate-800"
-                                    }`}
-                                >
-                                    {item.label}
-                                </p>
-                                <p
-                                    className={`text-[11px] font-medium ${
-                                        isActive ? "text-white/80" : "text-slate-500"
-                                    }`}
-                                >
-                                    {item.count} câu hỏi
-                                </p>
-                            </div>
+                            <span className="text-xs font-black truncate">{item.label}</span>
+                            <span
+                                className={`ml-2 rounded-lg px-2 py-0.5 text-xs font-black shrink-0 ${
+                                    isActive
+                                        ? "bg-white/25 text-white"
+                                        : "bg-slate-100 text-slate-800"
+                                }`}
+                            >
+                                {item.count}
+                            </span>
                         </button>
                     );
                 })}
