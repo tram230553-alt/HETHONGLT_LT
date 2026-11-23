@@ -796,7 +796,7 @@ export default function ChessPuzzleGameView({
     // Loading
     if (loading) {
         return (
-            <div className="flex h-full min-h-0 items-center justify-center bg-gradient-to-br from-[#f8eff8] via-[#eef3fb] to-[#eff9f6] p-6">
+            <div className="flex h-full min-h-0 items-center justify-center bg-[var(--theme-bg)] p-6">
                 <div className="flex flex-col items-center gap-3">
                     <div className="h-12 w-12 animate-spin rounded-full border-4 border-pink-500 border-t-transparent" />
                     <p className="font-extrabold text-slate-700">Đang chuẩn bị bàn cờ giải đố...</p>
@@ -808,7 +808,7 @@ export default function ChessPuzzleGameView({
     // Không có câu hỏi nào
     if (error || questions.length === 0) {
         return (
-            <div className="flex h-full min-h-0 flex-col items-center justify-center bg-gradient-to-br from-[#f8eff8] via-[#eef3fb] to-[#eff9f6] p-6">
+            <div className="flex h-full min-h-0 flex-col items-center justify-center bg-[var(--theme-bg)] p-6">
                 <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-lg border border-pink-100">
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-pink-600 mb-4">
                         <AlertCircle className="h-8 w-8" />
@@ -833,7 +833,7 @@ export default function ChessPuzzleGameView({
     const accuracyRate = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
 
     return (
-        <div className="relative flex h-full min-h-0 w-full flex-col select-none overflow-y-auto no-scrollbar bg-gradient-to-br from-[#f8eff8] via-[#eef3fb] to-[#eff9f6] text-slate-800 px-3 py-3 sm:px-6 sm:py-4">
+        <div className="relative flex h-full min-h-0 w-full flex-col select-none overflow-y-auto no-scrollbar bg-[var(--theme-bg)] text-slate-800 px-3 py-3 sm:px-6 sm:py-4">
             {/* TOAST NOTIFICATION */}
             {toastMsg && (
                 <div

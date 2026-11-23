@@ -180,7 +180,7 @@ export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }:
 
     if (loading) {
         return (
-            <div className="flex h-full min-h-0 items-center justify-center p-6 bg-slate-50">
+            <div className="flex h-full min-h-0 items-center justify-center p-6 bg-[var(--theme-bg)]">
                 <div className="flex flex-col items-center gap-3">
                     <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
                     <p className="text-sm font-bold text-slate-600">Đang tải danh sách game luyện tập...</p>
@@ -194,7 +194,7 @@ export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }:
     ========================================================= */
     if (!selectedSubjectId) {
         return (
-            <div className="h-full min-h-0 overflow-y-auto no-scrollbar bg-gradient-to-b from-amber-50/40 via-white to-slate-50/60 p-4 md:p-8">
+            <div className="h-full min-h-0 overflow-y-auto no-scrollbar bg-[var(--theme-bg)] p-4 md:p-8">
                 <div className="mx-auto max-w-5xl">
                     {/* Header Banner */}
                     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 p-6 md:p-8 text-white shadow-lg mb-8">
@@ -280,7 +280,7 @@ export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }:
        PAGE 2: SAU MÔN HỌC LÀ CÁC GAME ĐỂ ÔN TẬP
     ========================================================= */
     return (
-        <div className="h-full min-h-0 overflow-y-auto no-scrollbar bg-slate-50/70 p-4 md:p-8">
+        <div className="h-full min-h-0 overflow-y-auto no-scrollbar bg-[var(--theme-bg)] p-4 md:p-8">
             <div className="mx-auto max-w-5xl">
                 {/* Back button */}
                 <button

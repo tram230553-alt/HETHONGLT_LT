@@ -571,7 +571,7 @@ export default function WordPuzzleGameView({
     // Loading State
     if (loading) {
         return (
-            <div className="flex h-full min-h-0 items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-6">
+            <div className="flex h-full min-h-0 items-center justify-center bg-[var(--theme-bg)] p-6">
                 <div className="flex flex-col items-center gap-3">
                     <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
                     <p className="font-extrabold text-slate-700">Đang chuẩn bị màn chơi...</p>
@@ -583,7 +583,7 @@ export default function WordPuzzleGameView({
     // Error / No Questions
     if (error || questions.length === 0) {
         return (
-            <div className="flex h-full min-h-0 flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-6">
+            <div className="flex h-full min-h-0 flex-col items-center justify-center bg-[var(--theme-bg)] p-6">
                 <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-lg border border-purple-100">
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 mb-4">
                         <AlertCircle className="h-8 w-8" />
@@ -608,7 +608,7 @@ export default function WordPuzzleGameView({
     const finalWrongCount = questions.length - correctCount;
 
     return (
-        <div className="relative flex h-full min-h-0 w-full flex-col select-none overflow-y-auto no-scrollbar bg-gradient-to-br from-[#f8eff8] via-[#eef3fb] to-[#eff9f6] text-slate-800 px-4 py-4 md:px-8">
+        <div className="relative flex h-full min-h-0 w-full flex-col select-none overflow-y-auto no-scrollbar bg-[var(--theme-bg)] text-slate-800 px-4 py-4 md:px-8">
             {/* THÔNG BÁO SAO (TOAST) */}
             {starToast && (
                 <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-900/90 text-white px-5 py-2.5 text-xs font-bold shadow-xl backdrop-blur-md animate-fade-in flex items-center gap-2">
