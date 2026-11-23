@@ -27,6 +27,8 @@ import {
 
 interface WordPuzzleGameViewProps {
     topic: TopicDto;
+    customQuestions?: WordPuzzleQuestionDto[];
+    customTitle?: string;
     onBack: () => void;
     onEarnGems?: (amount: number) => void;
     userStars?: number;
@@ -281,6 +283,8 @@ function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number
 
 export default function WordPuzzleGameView({
     topic,
+    customQuestions,
+    customTitle,
     onBack,
     onEarnGems,
     userStars = 0,
@@ -318,6 +322,12 @@ export default function WordPuzzleGameView({
     // Tải câu hỏi từ Backend
     useEffect(() => {
         let mounted = true;
+        if (customQuestions && customQuestions.length > 0) {
+            setQuestions(customQuestions);
+            initQuestion(0, customQuestions[0]);
+            setLoading(false);
+            return;
+        }
         const load = async () => {
             try {
                 setLoading(true);
@@ -341,7 +351,7 @@ export default function WordPuzzleGameView({
         return () => {
             mounted = false;
         };
-    }, [topic.id]);
+    }, [topic.id, customQuestions]);
 
     // Đồng hồ đếm ngược
     useEffect(() => {
@@ -807,7 +817,7 @@ export default function WordPuzzleGameView({
                         </h2>
 
                         <p className="mt-1 text-xs text-slate-500">
-                            Chủ đề: <strong className="text-purple-700">{topic.name}</strong>
+                            Chủ đề: <strong className="text-purple-700">{customTitle || topic.name}</strong>
                         </p>
 
                         {/* BẢNG THỐNG KÊ SỐ LƯỢNG ĐÚNG, SAI CHÍNH XÁC */}

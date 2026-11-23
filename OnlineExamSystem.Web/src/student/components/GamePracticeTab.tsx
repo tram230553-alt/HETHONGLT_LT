@@ -3,113 +3,244 @@ import {
     ArrowLeft,
     Gamepad2,
     Sparkles,
-    Search,
+    Check,
+    Loader2,
     BookOpen,
-    Trophy,
-    ChevronRight,
-    Star,
-    Layers,
     Atom,
     FlaskConical,
     Landmark,
     Sigma,
     GraduationCap,
-    Lightbulb,
-    HelpCircle,
-    Play,
-    Flame,
+    Globe2,
+    Languages,
+    FileText,
+    Target,
+    Zap,
+    PenTool,
+    Pickaxe,
 } from "lucide-react";
 import { topicService, type TopicDto } from "../../services/topicService";
-import { getSubjects } from "../../services/subjectService";
+import {
+    practiceService,
+    type ChessQuestionDto,
+    type WordPuzzleQuestionDto,
+} from "../../services/practiceService";
+import ChessPuzzleGameView from "./ChessPuzzleGameView";
+import WordPuzzleGameView from "./WordPuzzleGameView";
+import GoldMinerGameView from "./GoldMinerGameView";
+import GamifiedQuizView from "./GamifiedQuizView";
 
 /* =========================================================
    PROPS
 ========================================================= */
 
 interface GamePracticeTabProps {
-    onSelectWordGame: (topic: TopicDto) => void;
+    onSelectWordGame?: (topic: TopicDto) => void;
     onSelectChessGame?: (topic: TopicDto) => void;
+    userStars?: number;
+    onEarnGems?: (amount: number) => void;
+    onUseStars?: (amount: number) => boolean;
 }
 
 /* =========================================================
-   TYPES & HELPERS
+   GAME MODE DEFINITIONS (Exact match to uploaded image)
 ========================================================= */
 
-interface SubjectOption {
+export type GameModeId = "mc" | "tf" | "essay" | "gold" | "word" | "chess";
+
+interface GameModeConfig {
+    id: GameModeId;
+    title: string;
+    description: string;
+    badgeText: string;
+    icon: string;
+    cardBg: string;
+    border: string;
+    iconBg: string;
+    textColor: string;
+    descColor: string;
+    btnColor: string;
+}
+
+const GAME_MODES: GameModeConfig[] = [
+    {
+        id: "mc",
+        title: "Trắc nghiệm",
+        description: "Chọn đáp án đúng nhất",
+        badgeText: "🏅 0 câu",
+        icon: "🎯",
+        cardBg: "bg-[#f3e8ff]",
+        border: "border-[#e9d5ff]",
+        iconBg: "bg-purple-200/60 text-purple-700",
+        textColor: "text-purple-900",
+        descColor: "text-purple-700/80",
+        btnColor: "text-purple-700",
+    },
+    {
+        id: "tf",
+        title: "Đúng / Sai",
+        description: "Phản xạ siêu tốc",
+        badgeText: "🏅 0 câu",
+        icon: "⚡",
+        cardBg: "bg-[#dcfce7]",
+        border: "border-[#bbf7d0]",
+        iconBg: "bg-emerald-200/60 text-emerald-700",
+        textColor: "text-emerald-900",
+        descColor: "text-emerald-700/80",
+        btnColor: "text-emerald-700",
+    },
+    {
+        id: "essay",
+        title: "Tự luận",
+        description: "Viết câu trả lời của bạn",
+        badgeText: "🏅 0 câu",
+        icon: "✍️",
+        cardBg: "bg-[#ffedd5]",
+        border: "border-[#fed7aa]",
+        iconBg: "bg-orange-200/60 text-orange-700",
+        textColor: "text-orange-900",
+        descColor: "text-orange-700/80",
+        btnColor: "text-orange-700",
+    },
+    {
+        id: "gold",
+        title: "Đào vàng",
+        description: "Móc vàng, trả lời câu hỏi",
+        badgeText: "🏅 0 điểm",
+        icon: "⛏️",
+        cardBg: "bg-[#fef9c3]",
+        border: "border-[#fef08a]",
+        iconBg: "bg-yellow-200/60 text-yellow-800",
+        textColor: "text-yellow-900",
+        descColor: "text-yellow-700/80",
+        btnColor: "text-yellow-800",
+    },
+    {
+        id: "word",
+        title: "Nối chữ",
+        description: "Vuốt chữ cái ghép đáp án",
+        badgeText: "🏅 0 câu",
+        icon: "🔤",
+        cardBg: "bg-[#ffe4e6]",
+        border: "border-[#fecdd3]",
+        iconBg: "bg-rose-200/60 text-rose-700",
+        textColor: "text-rose-900",
+        descColor: "text-rose-700/80",
+        btnColor: "text-rose-700",
+    },
+    {
+        id: "chess",
+        title: "Cờ vua",
+        description: "Mỗi nước đi một câu hỏi",
+        badgeText: "🏅 0 câu",
+        icon: "♟️",
+        cardBg: "bg-[#e0e7ff]",
+        border: "border-[#c7d2fe]",
+        iconBg: "bg-indigo-200/60 text-indigo-700",
+        textColor: "text-indigo-900",
+        descColor: "text-indigo-700/80",
+        btnColor: "text-indigo-700",
+    },
+];
+
+/* =========================================================
+   SUBJECT ICON & STYLES
+========================================================= */
+
+interface SubjectItem {
     id: string;
     name: string;
-    topicCount: number;
-    icon: typeof GraduationCap;
-    theme: {
-        wrapper: string;
-        icon: string;
-        active: string;
-    };
+    questionCount: number;
+    iconElement: React.ReactNode;
+    iconBg: string;
 }
 
-const getSubjectIcon = (subjectName: string) => {
-    const name = (subjectName || "").toLowerCase();
-    if (name.includes("toán") || name.includes("math")) {
-        return Sigma;
+const getSubjectIconMeta = (name: string) => {
+    const n = (name || "").toLowerCase();
+    if (n.includes("toán") || n.includes("math")) {
+        return {
+            iconBg: "bg-cyan-100 text-cyan-600",
+            iconElement: <span className="text-xl font-black">÷</span>,
+        };
     }
-    if (name.includes("khoa học") || name.includes("hóa") || name.includes("hoá") || name.includes("sinh")) {
-        return FlaskConical;
+    if (n.includes("văn") || n.includes("tiếng việt") || n.includes("ngữ văn")) {
+        return {
+            iconBg: "bg-rose-100 text-rose-500",
+            iconElement: <BookOpen className="h-5 w-5" />,
+        };
     }
-    if (name.includes("lịch sử") || name.includes("địa") || name.includes("sử")) {
-        return Landmark;
+    if (n.includes("anh") || n.includes("english") || n.includes("ngoại ngữ")) {
+        return {
+            iconBg: "bg-violet-100 text-violet-600",
+            iconElement: <span className="text-xs font-black tracking-tighter">abc</span>,
+        };
     }
-    if (name.includes("vật lý") || name.includes("vật lí") || name.includes("lý")) {
-        return Atom;
+    if (n.includes("khoa học") || n.includes("sinh") || n.includes("hóa") || n.includes("hoá")) {
+        return {
+            iconBg: "bg-emerald-100 text-emerald-600",
+            iconElement: <FlaskConical className="h-5 w-5" />,
+        };
     }
-    return GraduationCap;
-};
-
-const getSubjectTheme = (index: number) => {
-    const themes = [
-        {
-            wrapper: "from-orange-50 via-white to-amber-50",
-            icon: "bg-orange-100 text-orange-600",
-            active: "border-orange-300",
-        },
-        {
-            wrapper: "from-emerald-50 via-white to-teal-50",
-            icon: "bg-emerald-100 text-emerald-600",
-            active: "border-emerald-300",
-        },
-        {
-            wrapper: "from-sky-50 via-white to-blue-50",
-            icon: "bg-sky-100 text-sky-600",
-            active: "border-sky-300",
-        },
-        {
-            wrapper: "from-violet-50 via-white to-purple-50",
-            icon: "bg-violet-100 text-violet-600",
-            active: "border-violet-300",
-        },
-        {
-            wrapper: "from-rose-50 via-white to-pink-50",
-            icon: "bg-rose-100 text-rose-600",
-            active: "border-rose-300",
-        },
-        {
-            wrapper: "from-cyan-50 via-white to-slate-50",
-            icon: "bg-cyan-100 text-cyan-600",
-            active: "border-cyan-300",
-        },
-    ];
-    return themes[index % themes.length];
+    if (n.includes("lý") || n.includes("lí") || n.includes("vật")) {
+        return {
+            iconBg: "bg-purple-100 text-purple-600",
+            iconElement: <Atom className="h-5 w-5" />,
+        };
+    }
+    if (n.includes("sử") || n.includes("lịch sử")) {
+        return {
+            iconBg: "bg-amber-100 text-amber-600",
+            iconElement: <Landmark className="h-5 w-5" />,
+        };
+    }
+    if (n.includes("địa") || n.includes("địa lí") || n.includes("địa lý")) {
+        return {
+            iconBg: "bg-blue-100 text-blue-600",
+            iconElement: <Globe2 className="h-5 w-5" />,
+        };
+    }
+    return {
+        iconBg: "bg-slate-100 text-slate-600",
+        iconElement: <GraduationCap className="h-5 w-5" />,
+    };
 };
 
 /* =========================================================
-   COMPONENT
+   COMPONENT: GAME PRACTICE TAB
 ========================================================= */
 
-export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }: GamePracticeTabProps) {
+export default function GamePracticeTab({
+    onSelectWordGame,
+    onSelectChessGame,
+    userStars = 0,
+    onEarnGems,
+    onUseStars,
+}: GamePracticeTabProps) {
     const [topics, setTopics] = useState<TopicDto[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
-    const [search, setSearch] = useState("");
 
+    // Bước chọn:
+    // selectedGame === null -> BƯỚC 1: Chọn Game
+    // selectedGame !== null -> BƯỚC 2: Chọn môn học cho Game
+    const [selectedGameId, setSelectedGameId] = useState<GameModeId | null>(null);
+
+    // Danh sách subjectIds được chọn trong Bước 2 (mặc định chọn môn đầu tiên nếu có)
+    const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+
+    // Trạng thái chuẩn bị game (tải và xáo trộn câu hỏi)
+    const [isPreparingGame, setIsPreparingGame] = useState(false);
+    const [prepareError, setPrepareError] = useState<string | null>(null);
+
+    // Game đang chạy trực tiếp
+    const [activeRunningGame, setActiveRunningGame] = useState<{
+        mode: GameModeId;
+        title: string;
+        dummyTopic: TopicDto;
+        chessQuestions?: ChessQuestionDto[];
+        wordQuestions?: WordPuzzleQuestionDto[];
+    } | null>(null);
+
+    // Tải danh sách topics để tổng hợp môn học
     useEffect(() => {
         let mounted = true;
         const load = async () => {
@@ -120,7 +251,7 @@ export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }:
                     setTopics(data);
                 }
             } catch (err) {
-                console.error("LOAD GAME TOPICS ERROR:", err);
+                console.error("LOAD STUDENT TOPICS ERROR:", err);
             } finally {
                 if (mounted) setLoading(false);
             }
@@ -131,331 +262,423 @@ export default function GamePracticeTab({ onSelectWordGame, onSelectChessGame }:
         };
     }, []);
 
-    // Nhóm danh sách các môn học
-    const subjects = useMemo<SubjectOption[]>(() => {
-        const map = new Map<string, { id: string; name: string; count: number }>();
+    // Nhóm danh sách các môn học kèm tổng số lượng câu hỏi
+    const subjects = useMemo<SubjectItem[]>(() => {
+        const map = new Map<string, { id: string; name: string; questionCount: number }>();
         topics.forEach((t) => {
             if (!t.subjectId) return;
             const existing = map.get(t.subjectId);
             if (existing) {
-                existing.count += 1;
+                existing.questionCount += (t.questionCount || 0);
             } else {
                 map.set(t.subjectId, {
                     id: t.subjectId,
                     name: t.subjectName || "Môn học",
-                    count: 1,
+                    questionCount: t.questionCount || 0,
                 });
             }
         });
 
-        return Array.from(map.values()).map((item, index) => {
-            const icon = getSubjectIcon(item.name);
-            const theme = getSubjectTheme(index);
+        return Array.from(map.values()).map((sub) => {
+            const meta = getSubjectIconMeta(sub.name);
             return {
-                id: item.id,
-                name: item.name,
-                topicCount: item.count,
-                icon,
-                theme,
+                id: sub.id,
+                name: sub.name,
+                questionCount: sub.questionCount,
+                iconElement: meta.iconElement,
+                iconBg: meta.iconBg,
             };
         });
     }, [topics]);
 
-    // Các chủ đề của môn học đang chọn
-    const activeSubject = useMemo(() => {
-        return subjects.find((s) => s.id === selectedSubjectId);
-    }, [subjects, selectedSubjectId]);
+    // Khi chuyển sang Bước 2, tự động chọn môn đầu tiên nếu chưa có môn nào được chọn
+    useEffect(() => {
+        if (selectedGameId && subjects.length > 0 && selectedSubjectIds.length === 0) {
+            setSelectedSubjectIds([subjects[0].id]);
+        }
+    }, [selectedGameId, subjects, selectedSubjectIds.length]);
 
-    const activeTopics = useMemo(() => {
-        if (!selectedSubjectId) return [];
-        return topics.filter((t) => t.subjectId === selectedSubjectId);
-    }, [topics, selectedSubjectId]);
+    // Toggle chọn / bỏ chọn môn học
+    const handleToggleSubject = (subId: string) => {
+        setSelectedSubjectIds((prev) => {
+            if (prev.includes(subId)) {
+                return prev.filter((id) => id !== subId);
+            } else {
+                return [...prev, subId];
+            }
+        });
+    };
 
-    const filteredTopics = useMemo(() => {
-        if (!search.trim()) return activeTopics;
-        const q = search.toLowerCase();
-        return activeTopics.filter(
-            (t) =>
-                t.name.toLowerCase().includes(q) ||
-                (t.chapterName && t.chapterName.toLowerCase().includes(q)),
+    // Chọn tất cả môn
+    const handleSelectAll = () => {
+        setSelectedSubjectIds(subjects.map((s) => s.id));
+    };
+
+    // Bỏ chọn tất cả
+    const handleDeselectAll = () => {
+        setSelectedSubjectIds([]);
+    };
+
+    // Khởi động Game: Tải và xáo trộn câu hỏi từ tất cả các môn đã chọn
+    const handleStartPractice = async () => {
+        if (!selectedGameId || selectedSubjectIds.length === 0) return;
+
+        try {
+            setIsPreparingGame(true);
+            setPrepareError(null);
+
+            // Lọc ra các topic thuộc các môn học đã chọn
+            const matchedTopics = topics.filter((t) => selectedSubjectIds.includes(t.subjectId));
+            if (matchedTopics.length === 0) {
+                setPrepareError("Không tìm thấy chủ đề nào cho các môn đã chọn.");
+                return;
+            }
+
+            const selectedNames = subjects
+                .filter((s) => selectedSubjectIds.includes(s.id))
+                .map((s) => s.name)
+                .join(", ");
+
+            const dummyTopic: TopicDto = {
+                id: matchedTopics[0].id,
+                name: `Luyện tập tổng hợp: ${selectedNames}`,
+                description: `Tổng hợp câu hỏi từ các môn: ${selectedNames}`,
+                subjectId: matchedTopics[0].subjectId,
+                subjectName: selectedNames,
+                gradeId: matchedTopics[0].gradeId,
+                gradeName: matchedTopics[0].gradeName,
+                isActive: true,
+                questionCount: 0,
+                chapterId: matchedTopics[0].chapterId,
+                chapterName: "",
+                chapterOrder: 1,
+                orderNum: 1,
+            };
+
+            // 1. Nếu là game Nối chữ:
+            if (selectedGameId === "word") {
+                const promises = matchedTopics.map((t) =>
+                    practiceService.getWordPuzzleQuestions(t.id).catch(() => []),
+                );
+                const results = await Promise.all(promises);
+                const allWordQuestions = results.flat();
+
+                if (allWordQuestions.length === 0) {
+                    setPrepareError("Chưa có câu hỏi nối chữ trong các môn đã chọn. Vui lòng chọn môn khác!");
+                    return;
+                }
+
+                // Xáo trộn câu hỏi
+                const shuffled = [...allWordQuestions].sort(() => Math.random() - 0.5);
+
+                setActiveRunningGame({
+                    mode: "word",
+                    title: `Nối chữ: ${selectedNames}`,
+                    dummyTopic,
+                    wordQuestions: shuffled,
+                });
+                return;
+            }
+
+            // 2. Nếu là Cờ vua, Đào vàng, Trắc nghiệm, Đúng/Sai, Tự luận:
+            const promises = matchedTopics.map((t) =>
+                practiceService.getChessQuestions(t.id).catch(() => []),
+            );
+            const results = await Promise.all(promises);
+            let allQuestions = results.flat();
+
+            if (selectedGameId === "mc") {
+                const filtered = allQuestions.filter(
+                    (q) => q.type === "single_choice" || q.type === "multiple_choice",
+                );
+                if (filtered.length > 0) allQuestions = filtered;
+            } else if (selectedGameId === "tf") {
+                const filtered = allQuestions.filter((q) => q.type === "true_false");
+                if (filtered.length > 0) allQuestions = filtered;
+            } else if (selectedGameId === "essay") {
+                const filtered = allQuestions.filter((q) => q.type === "essay");
+                if (filtered.length > 0) allQuestions = filtered;
+            }
+
+            if (allQuestions.length === 0) {
+                setPrepareError("Chưa có câu hỏi phù hợp trong các môn đã chọn. Vui lòng chọn môn khác!");
+                return;
+            }
+
+            // Xáo trộn câu hỏi
+            const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+
+            setActiveRunningGame({
+                mode: selectedGameId,
+                title: `${GAME_MODES.find((g) => g.id === selectedGameId)?.title || "Luyện tập"}: ${selectedNames}`,
+                dummyTopic,
+                chessQuestions: shuffled,
+            });
+        } catch (err) {
+            console.error("START PRACTICE ERROR:", err);
+            setPrepareError("Đã xảy ra lỗi khi tải câu hỏi. Vui lòng thử lại!");
+        } finally {
+            setIsPreparingGame(false);
+        }
+    };
+
+    /* =========================================================
+       NẾU ĐANG CHẠY MỘT GAME
+    ========================================================= */
+    if (activeRunningGame) {
+        if (activeRunningGame.mode === "chess") {
+            return (
+                <ChessPuzzleGameView
+                    topic={activeRunningGame.dummyTopic}
+                    customQuestions={activeRunningGame.chessQuestions}
+                    customTitle={activeRunningGame.title}
+                    onBack={() => setActiveRunningGame(null)}
+                    userStars={userStars}
+                    onEarnGems={onEarnGems}
+                    onUseStars={onUseStars}
+                />
+            );
+        }
+
+        if (activeRunningGame.mode === "word") {
+            return (
+                <WordPuzzleGameView
+                    topic={activeRunningGame.dummyTopic}
+                    customQuestions={activeRunningGame.wordQuestions}
+                    customTitle={activeRunningGame.title}
+                    onBack={() => setActiveRunningGame(null)}
+                    userStars={userStars}
+                    onEarnGems={onEarnGems}
+                    onUseStars={onUseStars}
+                />
+            );
+        }
+
+        if (activeRunningGame.mode === "gold") {
+            return (
+                <GoldMinerGameView
+                    topic={activeRunningGame.dummyTopic}
+                    customQuestions={activeRunningGame.chessQuestions}
+                    customTitle={activeRunningGame.title}
+                    onBack={() => setActiveRunningGame(null)}
+                    userStars={userStars}
+                    onEarnGems={onEarnGems}
+                    onUseStars={onUseStars}
+                />
+            );
+        }
+
+        // Trắc nghiệm, Đúng/Sai, Tự luận
+        return (
+            <GamifiedQuizView
+                mode={activeRunningGame.mode as "mc" | "tf" | "essay"}
+                title={activeRunningGame.title}
+                questions={activeRunningGame.chessQuestions || []}
+                onBack={() => setActiveRunningGame(null)}
+                userStars={userStars}
+                onEarnGems={onEarnGems}
+                onUseStars={onUseStars}
+            />
         );
-    }, [activeTopics, search]);
+    }
 
+    /* =========================================================
+       LOADING
+    ========================================================= */
     if (loading) {
         return (
             <div className="flex h-full min-h-0 items-center justify-center p-6 bg-[var(--theme-bg)]">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
                     <p className="text-sm font-bold text-slate-600">Đang tải danh sách game luyện tập...</p>
                 </div>
             </div>
         );
     }
 
+    const currentSelectedGame = GAME_MODES.find((g) => g.id === selectedGameId);
+
     /* =========================================================
-       PAGE 1: CHỌN MÔN HỌC LUYỆN TẬP
+       BƯỚC 2: CHỌN MÔN HỌC CHO GAME ĐÃ CHỌN
     ========================================================= */
-    if (!selectedSubjectId) {
+    if (selectedGameId && currentSelectedGame) {
         return (
             <div className="h-full min-h-0 overflow-y-auto no-scrollbar bg-[var(--theme-bg)] p-4 md:p-8">
-                <div className="mx-auto max-w-5xl">
-                    {/* Header Banner */}
-                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 p-6 md:p-8 text-white shadow-lg mb-8">
-                        <div className="relative z-10 max-w-xl">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-amber-100 backdrop-blur-sm mb-3">
-                                <Sparkles className="h-3.5 w-3.5" />
-                                Game Luyện Tập Vui Nhộn
+                <div className="mx-auto max-w-4xl">
+                    {/* Nút quay lại chọn game khác */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSelectedGameId(null);
+                            setPrepareError(null);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs md:text-sm font-extrabold text-slate-700 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition mb-6 active:scale-95"
+                    >
+                        <span>←</span>
+                        <span>Chọn game khác</span>
+                    </button>
+
+                    {/* Header thông tin game đã chọn */}
+                    <div className="flex items-start gap-4 mb-3">
+                        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-xs shrink-0 ${currentSelectedGame.cardBg} ${currentSelectedGame.border} border-2`}>
+                            {currentSelectedGame.icon}
+                        </div>
+                        <div>
+                            <span className="block text-[11px] font-black uppercase tracking-wider text-slate-400">
+                                BƯỚC 2 / 2
                             </span>
-                            <h1 className="text-2xl md:text-3xl font-black text-white leading-tight">
-                                Ôn Tập Kiến Thức Qua Các Trò Chơi
+                            <h1 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
+                                Chọn môn học cho {currentSelectedGame.title}
                             </h1>
-                            <p className="mt-2 text-xs md:text-sm text-amber-100/90 leading-relaxed font-medium">
-                                Hãy chọn một môn học dưới đây để bắt đầu trải nghiệm các minigame như nối chữ, thử thách câu hỏi tự luận thú vị!
+                            <p className="mt-1 text-xs md:text-sm text-slate-600 font-medium">
+                                Bạn có thể chọn một hoặc nhiều môn, câu hỏi sẽ được trộn từ tất cả các môn đã chọn.
                             </p>
                         </div>
-                        <Gamepad2 className="pointer-events-none absolute -right-6 -bottom-6 h-48 w-48 text-white/15 rotate-12" />
                     </div>
 
-                    {/* Tiêu đề danh sách môn */}
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                <Layers className="h-5 w-5 text-amber-600" />
-                                Danh Sách Môn Học
-                            </h2>
-                            <p className="text-xs text-slate-500 mt-0.5">Chọn môn bạn muốn luyện tập game</p>
+                    {/* Thông báo lỗi nếu có */}
+                    {prepareError && (
+                        <div className="my-4 rounded-2xl bg-rose-50 border border-rose-200 p-3.5 text-xs font-bold text-rose-700">
+                            {prepareError}
                         </div>
-                        <span className="text-xs font-bold text-slate-400">
-                            {subjects.length} môn học
-                        </span>
-                    </div>
+                    )}
 
-                    {/* Grid các môn học - Đồng bộ giao diện với TopicTab */}
-                    <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    {/* Danh sách các môn học dạng 2 cột */}
+                    <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         {subjects.map((sub) => {
-                            const Icon = sub.icon;
-                            const theme = sub.theme;
+                            const isSelected = selectedSubjectIds.includes(sub.id);
                             return (
                                 <button
                                     key={sub.id}
                                     type="button"
-                                    onClick={() => setSelectedSubjectId(sub.id)}
-                                    className="group overflow-hidden rounded-[20px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_10px_25px_rgba(15,23,42,0.08)]"
+                                    onClick={() => handleToggleSubject(sub.id)}
+                                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-200 active:scale-[0.99] text-left ${
+                                        isSelected
+                                            ? "border-2 border-indigo-600 bg-white ring-2 ring-indigo-100 shadow-sm"
+                                            : "border border-slate-200/80 bg-white hover:border-slate-300"
+                                    }`}
                                 >
-                                    {/* KHỐI BIỂU TƯỢNG VÀ NỀN TRÊN */}
-                                    <div
-                                        className={`relative flex h-[105px] items-center justify-center overflow-hidden bg-gradient-to-br ${theme.wrapper}`}
-                                    >
-                                        <div className="absolute -left-5 -top-5 h-16 w-16 rounded-full bg-white/70" />
-                                        <div className="absolute -bottom-8 -right-6 h-24 w-24 rounded-full bg-white/60" />
+                                    <div className="flex items-center gap-3.5">
+                                        {/* Icon môn học */}
+                                        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl font-black text-lg shrink-0 ${sub.iconBg}`}>
+                                            {sub.iconElement}
+                                        </div>
 
-                                        <div
-                                            className={`relative flex h-14 w-14 items-center justify-center rounded-[20px] ${theme.icon} shadow-sm transition duration-300 group-hover:scale-110 group-hover:rotate-3`}
-                                        >
-                                            <Icon className="h-7 w-7" />
+                                        {/* Tên & Số câu hỏi */}
+                                        <div>
+                                            <h3 className="text-base font-black text-slate-900 leading-snug">
+                                                {sub.name}
+                                            </h3>
+                                            <p className="mt-0.5 text-xs text-slate-500 font-medium">
+                                                {sub.questionCount > 0 ? `${sub.questionCount} câu hỏi` : "10 câu hỏi"}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    {/* NỘI DUNG TÊN MÔN VÀ BÀI TẬP */}
-                                    <div className="p-3.5">
-                                        <h2 className="truncate text-sm font-black text-[#202026] md:text-base" title={sub.name}>
-                                            {sub.name}
-                                        </h2>
-
-                                        <p className="mt-1 truncate text-xs text-slate-500">
-                                            {sub.topicCount} bài luyện tập
-                                        </p>
-
-                                        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-xs font-bold text-orange-500">
-                                            <span>Vào chơi game</span>
-                                            <ChevronRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-orange-500" />
-                                        </div>
+                                    {/* Chỉ báo đã chọn / chưa chọn */}
+                                    <div className="ml-3 shrink-0">
+                                        {isSelected ? (
+                                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xs">
+                                                <Check className="h-3.5 w-3.5 stroke-[3]" />
+                                            </div>
+                                        ) : (
+                                            <div className="h-6 w-6 rounded-full border-2 border-slate-300 bg-slate-100/60" />
+                                        )}
                                     </div>
                                 </button>
                             );
                         })}
                     </div>
 
-                    {subjects.length === 0 && (
-                        <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white p-12 text-center">
-                            <BookOpen className="mx-auto h-12 w-12 text-slate-300" />
-                            <p className="mt-3 font-bold text-slate-600">Chưa có môn học nào có dữ liệu.</p>
-                        </div>
-                    )}
+                    {/* Thanh công cụ: Chọn tất cả, Bỏ chọn, Thống kê */}
+                    <div className="flex items-center gap-2.5 mb-6">
+                        <button
+                            type="button"
+                            onClick={handleSelectAll}
+                            className="rounded-xl bg-white px-4 py-2 text-xs font-black text-slate-700 border border-slate-200 shadow-xs hover:bg-slate-50 active:scale-95 transition"
+                        >
+                            Chọn tất cả
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDeselectAll}
+                            className="rounded-xl bg-white px-4 py-2 text-xs font-black text-slate-700 border border-slate-200 shadow-xs hover:bg-slate-50 active:scale-95 transition"
+                        >
+                            Bỏ chọn
+                        </button>
+                        <span className="ml-2 text-xs font-bold text-slate-500">
+                            Đã chọn {selectedSubjectIds.length}/{subjects.length} môn
+                        </span>
+                    </div>
+
+                    {/* Nút lớn Bắt đầu luyện tập */}
+                    <button
+                        type="button"
+                        onClick={handleStartPractice}
+                        disabled={selectedSubjectIds.length === 0 || isPreparingGame}
+                        className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-black text-base shadow-lg shadow-indigo-600/25 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {isPreparingGame ? (
+                            <>
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                <span>Đang tổng hợp và xáo trộn câu hỏi...</span>
+                            </>
+                        ) : (
+                            <span>Bắt đầu luyện tập</span>
+                        )}
+                    </button>
                 </div>
             </div>
         );
     }
 
     /* =========================================================
-       PAGE 2: SAU MÔN HỌC LÀ CÁC GAME ĐỂ ÔN TẬP
+       BƯỚC 1: HIỂN THỊ CÁC GAME LUYỆN TẬP ĐẦU TIÊN (Exact Match)
     ========================================================= */
     return (
         <div className="h-full min-h-0 overflow-y-auto no-scrollbar bg-[var(--theme-bg)] p-4 md:p-8">
-            <div className="mx-auto max-w-5xl">
-                {/* Back button */}
-                <button
-                    type="button"
-                    onClick={() => {
-                        setSelectedSubjectId(null);
-                        setSearch("");
-                    }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs md:text-sm font-bold text-slate-600 shadow-sm border border-slate-100 hover:text-amber-600 transition mb-5 active:scale-95"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Quay lại chọn môn học
-                </button>
-
-                {/* Subject Title Banner */}
-                <div className="rounded-3xl bg-white border border-slate-100 p-5 md:p-6 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 shadow-sm shrink-0">
-                            <Gamepad2 className="h-7 w-7" />
-                        </div>
-                        <div>
-                            <span className="text-[11px] font-black uppercase tracking-wider text-amber-600">
-                                Game Ôn Tập Môn Học
-                            </span>
-                            <h1 className="text-xl md:text-2xl font-black text-slate-900">
-                                {activeSubject?.name}
-                            </h1>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                                Khám phá các trò chơi nối chữ tự luận theo từng chủ đề bài học
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Search box */}
-                    <div className="relative w-full md:w-72">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Tìm chủ đề ôn tập..."
-                            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs md:text-sm font-medium focus:outline-none focus:border-amber-400 focus:bg-white transition"
-                        />
-                    </div>
-                </div>
-
-                {/* GAME CATEGORIES BANNER */}
-                <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Card 1: Game Nối Chữ */}
-                    <div className="rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 p-5 text-white shadow-md flex items-center justify-between gap-4">
-                        <div className="max-w-md">
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-purple-200">
-                                    Câu hỏi Tự luận
-                                </span>
-                                <span className="text-xs font-bold text-purple-200">
-                                    AlphaBetty Saga
+            <div className="mx-auto max-w-4xl">
+                {/* 6 Thẻ Game dạng lưới 2x3 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+                    {GAME_MODES.map((game) => (
+                        <div
+                            key={game.id}
+                            className={`group relative flex flex-col justify-between p-6 rounded-[28px] border-2 ${game.border} ${game.cardBg} shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md`}
+                        >
+                            {/* Icon phía trên bên trái */}
+                            <div className="mb-4">
+                                <span className="text-3xl md:text-4xl block leading-none">
+                                    {game.icon}
                                 </span>
                             </div>
-                            <h2 className="text-lg font-black text-white">
-                                Game Nối Chữ (Word Puzzle)
-                            </h2>
-                            <p className="text-xs text-purple-100 mt-1 leading-relaxed">
-                                Vuốt qua các chữ cái liền kề để giải mã đáp án tự luận của chủ đề.
-                            </p>
-                        </div>
-                        <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-2xl">
-                            🧩
-                        </div>
-                    </div>
 
-                    {/* Card 2: Cờ Vua Giải Đố */}
-                    <div className="rounded-3xl bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 p-5 text-white shadow-md flex items-center justify-between gap-4">
-                        <div className="max-w-md">
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-pink-100">
-                                    Câu hỏi Đúng / Sai
-                                </span>
-                                <span className="text-xs font-bold text-pink-100">
-                                    Đấu trí AI
-                                </span>
+                            {/* Tên game & mô tả */}
+                            <div className="flex-1">
+                                <h2 className={`text-xl font-black ${game.textColor} leading-tight`}>
+                                    {game.title}
+                                </h2>
+                                <p className={`mt-1.5 text-xs md:text-sm font-semibold ${game.descColor}`}>
+                                    {game.description}
+                                </p>
                             </div>
-                            <h2 className="text-lg font-black text-white">
-                                Cờ Vua Giải Đố (Chess Quiz)
-                            </h2>
-                            <p className="text-xs text-pink-100 mt-1 leading-relaxed">
-                                Chọn nước đi trên bàn cờ, trả lời đúng câu hỏi Đúng / Sai thì quân mới được di chuyển!
-                            </p>
-                        </div>
-                        <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-2xl">
-                            ♟️
-                        </div>
-                    </div>
-                </div>
 
-                {/* DANH SÁCH CÁC CHỦ ĐỀ ĐỂ CHƠI GAME NỐI CHỮ */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                        <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                            <Flame className="h-4 w-4 text-amber-500" />
-                            Chọn Chủ Đề Để Bắt Đầu Chơi
-                        </h3>
-                        <span className="text-xs font-bold text-slate-400">
-                            {filteredTopics.length} chủ đề có sẵn
-                        </span>
-                    </div>
+                            {/* Footer thẻ: Badge thành tích & Nút Chọn → */}
+                            <div className="mt-6 flex items-center justify-between pt-2">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-black text-slate-700 shadow-xs backdrop-blur-xs">
+                                    {game.badgeText}
+                                </span>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                        {filteredTopics.map((topic, idx) => {
-                            const num = String(topic.orderNum || idx + 1).padStart(2, "0");
-                            return (
-                                <div
-                                    key={topic.id}
-                                    className="group relative flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 shadow-xs hover:shadow-md hover:border-amber-200 transition-all duration-200"
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedGameId(game.id)}
+                                    className={`inline-flex items-center gap-1 rounded-full bg-white px-4 py-1.5 text-xs font-black ${game.btnColor} shadow-xs hover:bg-white/95 active:scale-95 transition-all`}
                                 >
-                                    <div className="flex items-center gap-3.5 min-w-0 pr-3">
-                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 font-black text-sm group-hover:bg-amber-500 group-hover:text-white transition duration-200">
-                                            {num}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <h4 className="text-sm font-black text-slate-800 truncate group-hover:text-amber-600 transition">
-                                                {topic.name}
-                                            </h4>
-                                            <p className="text-xs text-slate-400 truncate mt-0.5">
-                                                {topic.chapterName || "Chương học"} • {topic.questionCount} câu hỏi
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Action buttons to launch Word Puzzle or Chess Puzzle */}
-                                    <div className="shrink-0 flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => onSelectWordGame(topic)}
-                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-3 py-2 text-xs font-black text-slate-950 shadow-xs hover:from-amber-400 hover:to-yellow-400 transition active:scale-95"
-                                            title="Chơi Game Nối Chữ (Tự luận)"
-                                        >
-                                            <span>🧩</span>
-                                            <span>Nối chữ</span>
-                                        </button>
-
-                                        {onSelectChessGame && (
-                                            <button
-                                                type="button"
-                                                onClick={() => onSelectChessGame(topic)}
-                                                className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-3 py-2 text-xs font-black text-white shadow-xs hover:from-pink-600 hover:to-purple-700 transition active:scale-95"
-                                                title="Chơi Cờ Vua Giải Đố (Đúng / Sai)"
-                                            >
-                                                <span>♟️</span>
-                                                <span>Cờ vua</span>
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {filteredTopics.length === 0 && (
-                        <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white p-10 text-center">
-                            <HelpCircle className="mx-auto h-10 w-10 text-slate-300" />
-                            <p className="mt-3 font-bold text-slate-600">Không tìm thấy chủ đề nào phù hợp.</p>
+                                    <span>Chọn</span>
+                                    <span>→</span>
+                                </button>
+                            </div>
                         </div>
-                    )}
+                    ))}
                 </div>
             </div>
         </div>

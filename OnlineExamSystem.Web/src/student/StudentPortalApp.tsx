@@ -466,6 +466,9 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                     onSelectChessGame={(topic) => {
                         setSelectedChessGameTopic(topic);
                     }}
+                    userStars={stats.stars ?? 0}
+                    onEarnGems={handleEarnGems}
+                    onUseStars={handleUseStars}
                 />
             );
       case 3:
