@@ -13,6 +13,99 @@ import { usePagination } from "../../hooks/usePagination";
 
 export type LeaderboardMode = "all" | "practice" | "exam";
 
+function MedalRibbon({
+    rank,
+    size = "md",
+}: {
+    rank: 1 | 2 | 3;
+    size?: "sm" | "md" | "lg";
+}) {
+    const config = {
+        1: {
+            circleFill: "#FACC15",
+            circleStroke: "#EAB308",
+            ribbonLeft: "#EAB308",
+            ribbonRight: "#CA8A04",
+            textFill: "#78350F",
+        },
+        2: {
+            circleFill: "#E2E8F0",
+            circleStroke: "#94A3B8",
+            ribbonLeft: "#94A3B8",
+            ribbonRight: "#64748B",
+            textFill: "#1E293B",
+        },
+        3: {
+            circleFill: "#FDBA74",
+            circleStroke: "#EA580C",
+            ribbonLeft: "#EA580C",
+            ribbonRight: "#C2410C",
+            textFill: "#7C2D12",
+        },
+    }[rank];
+
+    const dims =
+        size === "lg"
+            ? { w: 38, h: 48, r: 15 }
+            : size === "md"
+              ? { w: 32, h: 40, r: 14 }
+              : { w: 26, h: 32, r: 12 };
+
+    return (
+        <svg
+            width={dims.w}
+            height={dims.h}
+            viewBox="0 0 36 46"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="shrink-0"
+        >
+            {/* Left ribbon tail */}
+            <path
+                d="M12 20L6 44L12 40L16 44L15 20H12Z"
+                fill={config.ribbonLeft}
+            />
+            {/* Right ribbon tail */}
+            <path
+                d="M24 20L30 44L24 40L20 44L21 20H24Z"
+                fill={config.ribbonRight}
+            />
+            {/* Main rosette circle */}
+            <circle
+                cx="18"
+                cy="17"
+                r={dims.r}
+                fill={config.circleFill}
+                stroke={config.circleStroke}
+                strokeWidth="1.5"
+            />
+            {/* Decorative dashed ring */}
+            <circle
+                cx="18"
+                cy="17"
+                r={dims.r - 2.5}
+                stroke={config.circleStroke}
+                strokeWidth="0.8"
+                strokeDasharray="2 2"
+                fill="none"
+                opacity="0.6"
+            />
+            {/* Rank number */}
+            <text
+                x="18"
+                y="22"
+                textAnchor="middle"
+                fill={config.textFill}
+                fontSize="14"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+            >
+                {rank}
+            </text>
+        </svg>
+    );
+}
+
 export default function LeaderboardView({
     onClose,
     isEmbeddedTab = false,
@@ -173,7 +266,7 @@ export default function LeaderboardView({
                     {onClose && (
                         <button
                             onClick={onClose}
-                            className="p-2 -ml-2 text-slate-400 hover:text-[var(--theme-text-muted)] transition"
+                            className="p-2 -ml-2 text-slate-400 hover:text-[var(--theme-text-muted)] transition cursor-pointer"
                             type="button"
                         >
                             <ChevronLeft className="w-5 h-5" />
@@ -188,6 +281,51 @@ export default function LeaderboardView({
             {/* CONTENT */}
             <div className="flex-1 overflow-y-auto no-scrollbar px-4 sm:px-6 md:px-8 py-6 pb-20">
                 <div className="max-w-5xl mx-auto w-full space-y-5">
+                    {/* TOP BREADCRUMB */}
+                    <div className="text-xs text-slate-400 font-medium px-1">
+                        Đấu Trường Trí Tuệ · Giao diện tinh gọn
+                    </div>
+
+                    {/* TOP BANNER CARD: BẢNG VINH DANH */}
+                    <div className="bg-[#FAF7FD] border border-purple-200/80 rounded-3xl p-6 sm:p-7 shadow-xs">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                            {/* Left Text */}
+                            <div>
+                                <span className="text-[11px] font-black tracking-widest text-[#C026D3] uppercase">
+                                    BẢNG VINH DANH
+                                </span>
+                                <h1 className="text-2xl sm:text-3xl font-black text-[#6B21A8] mt-1 tracking-tight">
+                                    Đấu Trường Trí Tuệ
+                                </h1>
+                                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 max-w-xl leading-relaxed">
+                                    Bảng vinh danh thành tích Luyện tập &amp; Luyện thi theo môn học, khối lớp và toàn trường
+                                </p>
+                            </div>
+
+                            {/* Right Medals */}
+                            <div className="flex items-center gap-5 sm:gap-7 self-start md:self-center shrink-0 pt-2 md:pt-0">
+                                <div className="flex flex-col items-center">
+                                    <MedalRibbon rank={1} size="lg" />
+                                    <span className="mt-1.5 text-[11px] font-bold text-amber-900">
+                                        Top 1 · Vàng
+                                    </span>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <MedalRibbon rank={2} size="lg" />
+                                    <span className="mt-1.5 text-[11px] font-bold text-slate-600">
+                                        Top 2 · Bạc
+                                    </span>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <MedalRibbon rank={3} size="lg" />
+                                    <span className="mt-1.5 text-[11px] font-bold text-amber-900">
+                                        Top 3 · Đồng
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* CARD 1: BỘ LỌC */}
                     <div className="bg-[var(--theme-surface)] border border-slate-200/70 rounded-3xl shadow-xs p-5 sm:p-6">
                         {/* Segmented Tabs: Tổng hợp / Luyện tập / Luyện thi */}
@@ -246,7 +384,7 @@ export default function LeaderboardView({
                                     >
                                         <option value="">Toàn trường</option>
                                         {grades.map((grade) => (
-                                            <option
+                                             <option
                                                 key={grade.id}
                                                 value={grade.id}
                                             >
@@ -361,7 +499,7 @@ export default function LeaderboardView({
                                     <button
                                         type="button"
                                         onClick={() => void loadLeaderboard()}
-                                        className="mt-3 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition"
+                                        className="mt-3 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition cursor-pointer"
                                     >
                                         Thử lại
                                     </button>
@@ -421,8 +559,12 @@ export default function LeaderboardView({
                                         <tbody className="divide-y divide-slate-100">
                                             {rankingPagination.pageItems.map(
                                                 (player) => {
-                                                    const isFirst =
+                                                    const isTop1 =
                                                         player.rank === 1;
+                                                    const isTop2 =
+                                                        player.rank === 2;
+                                                    const isTop3 =
+                                                        player.rank === 3;
                                                     const isMe =
                                                         myProfile?.id ===
                                                         player.studentId;
@@ -433,26 +575,37 @@ export default function LeaderboardView({
                                                                 player.studentId
                                                             }
                                                             className={`transition-colors ${
-                                                                isFirst
-                                                                    ? "bg-[#FAF5FF]/70"
+                                                                isTop1
+                                                                    ? "bg-[#FEFCE8]/50 hover:bg-[#FEFCE8]/70"
                                                                     : isMe
-                                                                      ? "bg-purple-50/40"
+                                                                      ? "bg-purple-50/40 hover:bg-purple-50/60"
                                                                       : "bg-white hover:bg-slate-50/60"
                                                             }`}
                                                         >
                                                             {/* Hạng */}
                                                             <td className="py-4 pl-3 pr-2 align-middle">
-                                                                <div
-                                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold ${
-                                                                        isFirst
-                                                                            ? "bg-[#F3E8FF] text-[#7C3AED]"
-                                                                            : "bg-slate-100 text-slate-600"
-                                                                    }`}
-                                                                >
-                                                                    {
-                                                                        player.rank
-                                                                    }
-                                                                </div>
+                                                                {isTop1 ? (
+                                                                    <MedalRibbon
+                                                                        rank={1}
+                                                                        size="md"
+                                                                    />
+                                                                ) : isTop2 ? (
+                                                                    <MedalRibbon
+                                                                        rank={2}
+                                                                        size="md"
+                                                                    />
+                                                                ) : isTop3 ? (
+                                                                    <MedalRibbon
+                                                                        rank={3}
+                                                                        size="md"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold bg-slate-100 text-slate-600">
+                                                                        {
+                                                                            player.rank
+                                                                        }
+                                                                    </div>
+                                                                )}
                                                             </td>
 
                                                             {/* Học sinh */}
@@ -474,7 +627,7 @@ export default function LeaderboardView({
                                                                     "practice"
                                                                         ? `${player.totalPractices} luyện tập`
                                                                         : mode ===
-                                                                            "exam"
+                                                                              "exam"
                                                                           ? `${player.totalExams} đề thi`
                                                                           : `${player.totalPractices} luyện tập · ${player.totalExams} đề thi`}
                                                                 </p>
@@ -499,7 +652,7 @@ export default function LeaderboardView({
                                                             </td>
 
                                                             {/* Câu đúng */}
-                                                            <td className="py-4 px-3 align-middle text-sm font-medium text-emerald-700">
+                                                            <td className="py-4 px-3 align-middle text-sm font-medium text-emerald-600">
                                                                 {
                                                                     player.totalCorrectAnswers
                                                                 }{" "}
@@ -519,7 +672,7 @@ export default function LeaderboardView({
                                                             <td className="py-4 pl-3 pr-3 align-middle text-right">
                                                                 <span
                                                                     className={`text-lg sm:text-xl font-bold ${
-                                                                        isFirst
+                                                                        isTop1
                                                                             ? "text-[#7C3AED]"
                                                                             : "text-slate-900"
                                                                     }`}
