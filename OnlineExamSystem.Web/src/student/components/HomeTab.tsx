@@ -11,7 +11,6 @@ import {
   GraduationCap, 
   Play, 
   CheckCircle2, 
-  Calendar, 
   TrendingUp,
   Award,
   RefreshCw
@@ -254,19 +253,6 @@ export default function HomeTab({
             </div>;
           })}
           {!dashboardLoading && (dashboard?.availableExams.length ?? 0) === 0 && <p className="py-4 text-center text-xs italic text-slate-400">Hiện chưa có đề thi được phát hành cho khối của bạn.</p>}
-        </div>
-      </div>
-
-      {/* 5. UPCOMING EXAMS (Exam Name, Date, Countdown) */}
-      <div>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h5 className="font-display font-bold text-[var(--theme-text)] text-sm">Sự Kiện Phòng Thi Trọng Tâm</h5>
-          <span className="text-xs text-[var(--theme-primary)] font-extrabold flex items-center gap-1 font-mono">{dashboard?.availableExamCount ?? 0} đề đang mở</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {(dashboard?.availableExams ?? []).slice(0, 2).map((exam, index) => <div key={exam.examId} className={`bg-[var(--theme-surface)] p-3.5 rounded-2xl border ${index === 0 ? 'border-rose-100 hover:border-rose-200' : 'border-indigo-100 hover:border-indigo-200'} shadow-sm relative overflow-hidden flex flex-col justify-between h-[120px] cursor-pointer`} onClick={() => onSwitchTab?.(2)}><div className="absolute right-0 bottom-0 text-[56px] text-indigo-50/70 font-display font-extrabold leading-none -mb-3 -mr-1">{index === 0 ? '📅' : '🎓'}</div><div className="relative z-10 space-y-1"><span className={`${index === 0 ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-[var(--theme-primary)]'} text-[8px] font-extrabold tracking-wide uppercase px-2 py-0.5 rounded-md`}>{exam.subjectName}</span><p className="text-xs font-bold text-[var(--theme-text)] leading-tight line-clamp-2">{exam.examName}</p></div><div className="relative z-10"><div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono"><Calendar className="w-3.5 h-3.5 text-indigo-400" /><span>{exam.durationMinutes} phút · {exam.totalQuestions} câu</span></div><p className="text-[10px] font-bold text-[var(--theme-text-muted)] font-sans mt-1 truncate">GV. {exam.teacherName}</p></div></div>)}
-          {!dashboardLoading && (dashboard?.availableExams.length ?? 0) === 0 && <div className="col-span-2 rounded-2xl border border-dashed border-[#E9EDF7] bg-[var(--theme-surface)] p-8 text-center text-xs text-slate-400">Chưa có đề thi đang mở.</div>}
         </div>
       </div>
 
