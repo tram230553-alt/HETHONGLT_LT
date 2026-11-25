@@ -10,7 +10,6 @@ using OnlineExamSystem.Application.Features.Subjects.Queries.GetSubjectDetail;
 
 namespace OnlineExamSystem.API.Controllers
 {
-    [Authorize(Roles = "Admin")]
     [ApiController]
     [Route("api/[controller]")]
     public class SubjectsController : ControllerBase
