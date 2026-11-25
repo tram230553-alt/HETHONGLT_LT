@@ -477,57 +477,7 @@ export default function LeaderboardView({
                             </div>
                         </div>
 
-                        {/* THẺ CHỌN NHANH PHÂN LOẠI MÔN HỌC */}
-                        {subjects.length > 0 && (
-                            <div className="mt-4 pt-3.5 border-t border-slate-100">
-                                <div className="flex items-center justify-between mb-2">
-                                    
-                                    {selectedSubjectId && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedSubjectId("")}
-                                            className="text-xs font-semibold text-[#7C3AED] hover:underline cursor-pointer"
-                                        >
-                                            Xem tất cả môn
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedSubjectId("")}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer shrink-0 ${
-                                            !selectedSubjectId
-                                                ? "bg-[#7C3AED] text-white shadow-xs"
-                                                : "bg-[#F3F1F6] text-slate-600 hover:bg-slate-200"
-                                        }`}
-                                    >
-                                        Tất cả các môn
-                                    </button>
-                                    {subjects.map((sub) => {
-                                        const isSelected = selectedSubjectId === sub.id;
-                                        return (
-                                            <button
-                                                key={sub.id}
-                                                type="button"
-                                                onClick={() =>
-                                                    setSelectedSubjectId(
-                                                        isSelected ? "" : sub.id
-                                                    )
-                                                }
-                                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer shrink-0 ${
-                                                    isSelected
-                                                        ? "bg-[#7C3AED] text-white shadow-xs"
-                                                        : "bg-[#F3F1F6] text-slate-600 hover:bg-slate-200"
-                                                }`}
-                                            >
-                                                {sub.tenMH}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
+                        
                     </div>
 
                     {/* CARD 2: BẢNG XẾP HẠNG */}
