@@ -481,10 +481,7 @@ export default function LeaderboardView({
                         {subjects.length > 0 && (
                             <div className="mt-4 pt-3.5 border-t border-slate-100">
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                                        <BookOpen className="w-3.5 h-3.5 text-[#7C3AED]" />
-                                        Phân loại theo từng môn:
-                                    </span>
+                                    
                                     {selectedSubjectId && (
                                         <button
                                             type="button"
