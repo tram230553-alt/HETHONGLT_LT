@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using OnlineExamSystem.Application.DTOs.Students;
 
 namespace OnlineExamSystem.Application.Features.Students

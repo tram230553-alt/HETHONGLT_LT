@@ -275,9 +275,7 @@ export default function HomeTab({
         <div className="flex items-center justify-between px-1 gap-2">
           <div>
             <h5 className="font-display font-bold text-[var(--theme-text)] text-sm">Lịch Nhiệm Vụ Hôm Nay</h5>
-            <span className="text-[10px] text-slate-400 font-sans">
-              3 chủ đề từ 3 môn khác nhau · Chỉ đổi sang môn tiếp theo khi bạn đã hoàn thành bài học
-            </span>
+
           </div>
           {missionPlan?.allTopicsCompleted ? (
             <span className="text-[9px] bg-emerald-100 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full shrink-0">

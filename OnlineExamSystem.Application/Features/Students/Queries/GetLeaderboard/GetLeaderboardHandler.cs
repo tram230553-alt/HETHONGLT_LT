@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OnlineExamSystem.Application.Common.Interfaces;
 using OnlineExamSystem.Application.DTOs.Students;

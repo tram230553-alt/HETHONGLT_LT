@@ -227,7 +227,8 @@ namespace OnlineExamSystem.API.Controllers
         public async Task<IActionResult> GetLeaderboard(
     [FromQuery] Guid? gradeId,
     [FromQuery] Guid? subjectId,
-    [FromQuery] int limit = 10)
+    [FromQuery] string? mode = "all",
+    [FromQuery] int limit = 50)
         {
             var result = await _mediator.Send(
                 new GetLeaderboardQuery
@@ -235,6 +236,8 @@ namespace OnlineExamSystem.API.Controllers
                     GradeId = gradeId,
 
                     SubjectId = subjectId,
+
+                    Mode = mode,
 
                     Limit = limit
                 });

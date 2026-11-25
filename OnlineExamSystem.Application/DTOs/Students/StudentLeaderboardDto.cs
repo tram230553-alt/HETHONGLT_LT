@@ -1,4 +1,4 @@
-﻿namespace OnlineExamSystem.Application.DTOs.Students;
+namespace OnlineExamSystem.Application.DTOs.Students;
 
 public class StudentLeaderboardDto
 {

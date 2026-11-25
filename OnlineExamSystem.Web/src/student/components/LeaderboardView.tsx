@@ -1,17 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-    ChevronLeft,
-    Trophy,
-    Medal,
-    Star,
-    User,
-    BookOpen,
-    FileCheck2,
-    Layers,
-    School,
-    GraduationCap,
-    Filter,
-} from "lucide-react";
+import { ChevronLeft, ChevronDown } from "lucide-react";
 import {
     getStudentLeaderboard,
     getMyStudentProfile,
@@ -37,18 +25,13 @@ export default function LeaderboardView({
     const [subjects, setSubjects] = useState<SubjectDto[]>([]);
     const [myProfile, setMyProfile] = useState<StudentApiDto | null>(null);
 
-    // Bộ lọc:
-    // 1. Hình thức: "all" (Tổng hợp), "practice" (Luyện tập), "exam" (Luyện thi)
     const [mode, setMode] = useState<LeaderboardMode>("all");
-    // 2. Phạm vi: "" = Toàn trường, hoặc ID của Khối (Khối 10, Khối 11, Khối 12)
     const [selectedGradeId, setSelectedGradeId] = useState<string>("");
-    // 3. Môn học: "" = Tất cả môn, hoặc ID của Môn học
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
 
     const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
     const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
 
-    // Tải danh mục Khối, Môn học và Hồ sơ học sinh hiện tại
     useEffect(() => {
         let active = true;
         const loadMeta = async () => {
@@ -62,13 +45,15 @@ export default function LeaderboardView({
             const sortedGrades = [...gradeList].sort((a, b) =>
                 a.tenKhoi.localeCompare(b.tenKhoi, "vi", { numeric: true })
             );
-            // Chỉ hiển thị các môn có câu hỏi hoặc đề thi (hoặc toàn bộ nếu chưa có thống kê)
             const activeSubjects = subjectList.filter(
-                (s) => (s.questionsCount ?? 0) > 0 || (s.examsCount ?? 0) > 0 || (s.topicsCount ?? 0) > 0
+                (s) =>
+                    (s.questionsCount ?? 0) > 0 ||
+                    (s.examsCount ?? 0) > 0 ||
+                    (s.topicsCount ?? 0) > 0
             );
-            const finalSubjects = (activeSubjects.length > 0 ? activeSubjects : subjectList).sort((a, b) =>
-                a.tenMH.localeCompare(b.tenMH, "vi")
-            );
+            const finalSubjects = (
+                activeSubjects.length > 0 ? activeSubjects : subjectList
+            ).sort((a, b) => a.tenMH.localeCompare(b.tenMH, "vi"));
 
             setGrades(sortedGrades);
             setSubjects(finalSubjects);
@@ -80,7 +65,6 @@ export default function LeaderboardView({
         };
     }, []);
 
-    // Tải dữ liệu bảng xếp hạng mỗi khi bộ lọc thay đổi
     const loadLeaderboard = async () => {
         try {
             setIsLoadingLeaderboard(true);
@@ -150,8 +134,7 @@ export default function LeaderboardView({
     const selectedSubjectName = useMemo(() => {
         if (!selectedSubjectId) return "Tất cả môn học";
         return (
-            subjects.find((s) => s.id === selectedSubjectId)?.tenMH ||
-            "Môn học"
+            subjects.find((s) => s.id === selectedSubjectId)?.tenMH || "Môn học"
         );
     }, [selectedSubjectId, subjects]);
 
@@ -164,16 +147,16 @@ export default function LeaderboardView({
 
     const modeTitle =
         mode === "practice"
-            ? "Xếp hạng Luyện tập"
+            ? "Xếp hạng luyện tập"
             : mode === "exam"
-              ? "Xếp hạng Luyện thi"
-              : "Xếp hạng Tổng hợp";
+              ? "Xếp hạng luyện thi"
+              : "Xếp hạng tổng hợp";
 
     const modeSubtitle =
         mode === "practice"
-            ? "Tính theo điểm trung bình và số câu đúng các bài luyện tập chủ đề"
+            ? "Tính theo thành tích Luyện tập chủ đề"
             : mode === "exam"
-              ? "Tính theo điểm trung bình và số câu đúng các đề luyện thi"
+              ? "Tính theo thành tích các đề Luyện thi"
               : "Kết hợp thành tích cả Luyện tập chủ đề và Luyện thi";
 
     return (
@@ -181,7 +164,7 @@ export default function LeaderboardView({
             className={
                 isEmbeddedTab
                     ? "flex-1 flex flex-col h-full overflow-hidden bg-[var(--theme-bg)]"
-                    : "absolute inset-0 bg-[var(--theme-surface-soft)] z-50 flex flex-col animate-fade-in overflow-hidden sm:rounded-[32px]"
+                    : "absolute inset-0 bg-[var(--theme-bg)] z-50 flex flex-col animate-fade-in overflow-hidden sm:rounded-[32px]"
             }
         >
             {/* HEADER (khi mở dạng modal từ trang Cá nhân) */}
@@ -203,409 +186,364 @@ export default function LeaderboardView({
             )}
 
             {/* CONTENT */}
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
-                <div className="max-w-4xl mx-auto w-full">
-                    {/* BANNER */}
-                    <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-[var(--theme-primary)] p-6 text-white text-center pb-12 rounded-b-[36px] shadow-sm">
-                        <div className="relative inline-flex items-center justify-center">
-                            <Trophy className="w-11 h-11 text-yellow-300 drop-shadow-md" />
-                            <Star className="absolute -top-1 -right-3 w-4 h-4 text-yellow-200 fill-yellow-200" />
+            <div className="flex-1 overflow-y-auto no-scrollbar px-4 sm:px-6 md:px-8 py-6 pb-20">
+                <div className="max-w-5xl mx-auto w-full space-y-5">
+                    {/* CARD 1: BỘ LỌC */}
+                    <div className="bg-[var(--theme-surface)] border border-slate-200/70 rounded-3xl shadow-xs p-5 sm:p-6">
+                        {/* Segmented Tabs: Tổng hợp / Luyện tập / Luyện thi */}
+                        <div className="grid grid-cols-3 bg-[#F3F1F6] p-1 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => setMode("all")}
+                                className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm transition cursor-pointer ${
+                                    mode === "all"
+                                        ? "bg-white text-[#7C3AED] font-semibold shadow-xs"
+                                        : "text-slate-500 hover:text-slate-800 font-medium"
+                                }`}
+                            >
+                                Tổng hợp
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMode("practice")}
+                                className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm transition cursor-pointer ${
+                                    mode === "practice"
+                                        ? "bg-white text-[#7C3AED] font-semibold shadow-xs"
+                                        : "text-slate-500 hover:text-slate-800 font-medium"
+                                }`}
+                            >
+                                Luyện tập
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMode("exam")}
+                                className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm transition cursor-pointer ${
+                                    mode === "exam"
+                                        ? "bg-white text-[#7C3AED] font-semibold shadow-xs"
+                                        : "text-slate-500 hover:text-slate-800 font-medium"
+                                }`}
+                            >
+                                Luyện thi
+                            </button>
                         </div>
 
-                        <h2 className="font-display font-extrabold text-xl mt-2">
-                            Đấu Trường Trí Tuệ
-                        </h2>
+                        <div className="border-t border-slate-100 my-5" />
 
-                        <p className="text-xs font-sans text-blue-100 mt-1 opacity-90">
-                            Bảng vinh danh thành tích Luyện tập & Luyện thi theo môn học, khối lớp và toàn trường
-                        </p>
-                    </div>
-
-                    {/* BỘ LỌC PHÂN LOẠI BẢNG XẾP HẠNG */}
-                    <div className="px-4 sm:px-6 -mt-7">
-                        <div className="bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-3xl shadow-sm p-4 space-y-4">
-                            {/* 1. PHÂN LOẠI HÌNH THỨC: TỔNG HỢP / LUYỆN TẬP / LUYỆN THI */}
+                        {/* 2 Dropdowns: Phạm vi xếp hạng & Môn học */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                            {/* Phạm vi xếp hạng */}
                             <div>
-                                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                                    <Layers className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                                    1. Phân loại theo hình thức
-                                </p>
-                                <div className="grid grid-cols-3 gap-2 bg-slate-100/80 p-1 rounded-2xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setMode("all")}
-                                        className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                                            mode === "all"
-                                                ? "bg-[var(--theme-surface)] text-[var(--theme-primary)] shadow-xs"
-                                                : "text-slate-600 hover:text-slate-900"
-                                        }`}
+                                <label className="block text-xs font-medium text-slate-500 mb-2">
+                                    Phạm vi xếp hạng
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={selectedGradeId}
+                                        onChange={(e) =>
+                                            setSelectedGradeId(e.target.value)
+                                        }
+                                        className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-800 focus:border-[#7C3AED] focus:outline-none transition cursor-pointer"
                                     >
-                                        <Trophy className="w-3.5 h-3.5" />
-                                        <span>Tổng hợp</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setMode("practice")}
-                                        className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                                            mode === "practice"
-                                                ? "bg-[var(--theme-surface)] text-emerald-600 shadow-xs"
-                                                : "text-slate-600 hover:text-slate-900"
-                                        }`}
-                                    >
-                                        <BookOpen className="w-3.5 h-3.5" />
-                                        <span>Luyện tập</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setMode("exam")}
-                                        className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                                            mode === "exam"
-                                                ? "bg-[var(--theme-surface)] text-indigo-600 shadow-xs"
-                                                : "text-slate-600 hover:text-slate-900"
-                                        }`}
-                                    >
-                                        <FileCheck2 className="w-3.5 h-3.5" />
-                                        <span>Luyện thi</span>
-                                    </button>
+                                        <option value="">Toàn trường</option>
+                                        {grades.map((grade) => (
+                                            <option
+                                                key={grade.id}
+                                                value={grade.id}
+                                            >
+                                                {grade.tenKhoi}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                                 </div>
-                            </div>
 
-                            {/* 2. PHẠM VI XẾP HẠNG: TOÀN TRƯỜNG & THEO KHỐI */}
-                            <div>
-                                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                                    <School className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                                    2. Phạm vi xếp hạng (Toàn trường & Theo khối)
-                                </p>
-                                <div className="flex flex-wrap gap-2">
+                                {myProfile?.gradeId ? (
                                     <button
                                         type="button"
-                                        onClick={() => setSelectedGradeId("")}
-                                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold border transition cursor-pointer ${
-                                            selectedGradeId === ""
-                                                ? "bg-[var(--theme-primary)] text-white border-[var(--theme-primary)] shadow-xs"
-                                                : "bg-[var(--theme-surface)] text-slate-600 border-[var(--theme-border)] hover:border-blue-300"
-                                        }`}
+                                        onClick={() =>
+                                            setSelectedGradeId(
+                                                selectedGradeId ===
+                                                    myProfile.gradeId
+                                                    ? ""
+                                                    : myProfile.gradeId!
+                                            )
+                                        }
+                                        className="mt-2.5 inline-block text-xs font-medium text-[#7C3AED] hover:underline cursor-pointer"
                                     >
-                                        <School className="w-3.5 h-3.5" />
-                                        <span>Toàn trường</span>
+                                        {selectedGradeId === myProfile.gradeId
+                                            ? "Chọn nhanh: Xem Toàn trường"
+                                            : `Chọn nhanh: Khối của tôi (${myProfile.tenKhoi || "Khối 11"})`}
                                     </button>
-
-                                    {myProfile?.gradeId && (
+                                ) : (
+                                    grades[0] && (
                                         <button
                                             type="button"
                                             onClick={() =>
-                                                setSelectedGradeId(
-                                                    myProfile.gradeId!
-                                                )
+                                                setSelectedGradeId(grades[0].id)
                                             }
-                                            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold border transition cursor-pointer ${
-                                                selectedGradeId ===
-                                                myProfile.gradeId
-                                                    ? "bg-amber-500 text-white border-amber-500 shadow-xs"
-                                                    : "bg-amber-50/70 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                            }`}
+                                            className="mt-2.5 inline-block text-xs font-medium text-[#7C3AED] hover:underline cursor-pointer"
                                         >
-                                            <GraduationCap className="w-3.5 h-3.5" />
-                                            <span>
-                                                Khối của tôi (
-                                                {myProfile.tenKhoi || "Khối học"}
-                                                )
-                                            </span>
+                                            Chọn nhanh: Khối của tôi (
+                                            {grades[0].tenKhoi})
                                         </button>
-                                    )}
-
-                                    {grades.map((grade) => {
-                                        const isActive =
-                                            selectedGradeId === grade.id;
-                                        return (
-                                            <button
-                                                key={grade.id}
-                                                type="button"
-                                                onClick={() =>
-                                                    setSelectedGradeId(grade.id)
-                                                }
-                                                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold border transition cursor-pointer ${
-                                                    isActive
-                                                        ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
-                                                        : "bg-[var(--theme-surface)] text-slate-600 border-[var(--theme-border)] hover:border-indigo-300"
-                                                }`}
-                                            >
-                                                {grade.tenKhoi}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                    )
+                                )}
                             </div>
 
-                            {/* 3. PHÂN LOẠI THEO MÔN HỌC */}
+                            {/* Môn học */}
                             <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                                        <Filter className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                                        3. Phân loại theo môn học
-                                    </p>
-                                    <span className="text-[10px] font-bold text-[var(--theme-primary)]">
-                                        Đang xem: {selectedSubjectName}
-                                    </span>
-                                </div>
-
-                                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedSubjectId("")}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border whitespace-nowrap transition cursor-pointer shrink-0 ${
-                                            selectedSubjectId === ""
-                                                ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                                                : "bg-[var(--theme-surface)] text-slate-600 border-[var(--theme-border)] hover:border-emerald-300"
-                                        }`}
+                                <label className="block text-xs font-medium text-slate-500 mb-2">
+                                    Môn học
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={selectedSubjectId}
+                                        onChange={(e) =>
+                                            setSelectedSubjectId(e.target.value)
+                                        }
+                                        className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm font-medium text-slate-800 focus:border-[#7C3AED] focus:outline-none transition cursor-pointer"
                                     >
-                                        Tất cả môn học
-                                    </button>
-                                    {subjects.map((sub) => {
-                                        const isActive =
-                                            selectedSubjectId === sub.id;
-                                        return (
-                                            <button
-                                                key={sub.id}
-                                                type="button"
-                                                onClick={() =>
-                                                    setSelectedSubjectId(sub.id)
-                                                }
-                                                className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border whitespace-nowrap transition cursor-pointer shrink-0 ${
-                                                    isActive
-                                                        ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                                                        : "bg-[var(--theme-surface)] text-slate-600 border-[var(--theme-border)] hover:border-emerald-300"
-                                                }`}
-                                            >
+                                        <option value="">Tất cả môn học</option>
+                                        {subjects.map((sub) => (
+                                            <option key={sub.id} value={sub.id}>
                                                 {sub.tenMH}
-                                            </button>
-                                        );
-                                    })}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" />
                                 </div>
-                            </div>
 
-                            {/* TÓM TẮT BỘ LỌC ĐANG CHỌN */}
-                            <div className="pt-3 border-t border-[var(--theme-border)] flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                                        <Trophy className="w-4 h-4 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <p className="font-display font-extrabold text-xs sm:text-sm text-[var(--theme-text)]">
-                                            {modeTitle} · {selectedGradeName} ·{" "}
-                                            {selectedSubjectName}
-                                        </p>
-                                        <p className="text-[10px] text-[var(--theme-text-light)]">
-                                            {modeSubtitle}
-                                        </p>
-                                    </div>
-                                </div>
-                                <span className="text-[11px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">
-                                    {rankings.length} học sinh
-                                </span>
+                                <p className="mt-2.5 text-xs text-slate-400">
+                                    {selectedSubjectId
+                                        ? `Chỉ tính kết quả của môn ${selectedSubjectName}`
+                                        : "Bao gồm tất cả các môn học"}
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* LOADING */}
-                    {isLoadingLeaderboard && (
-                        <div className="py-12 text-center">
-                            <div className="animate-spin mx-auto w-8 h-8 border-2 border-slate-300 border-t-slate-700 rounded-full" />
-                            <p className="mt-3 text-sm text-slate-500">
-                                Đang tải bảng xếp hạng...
-                            </p>
-                        </div>
-                    )}
-
-                    {/* ERROR */}
-                    {leaderboardError && (
-                        <div className="px-4 sm:px-6 py-8">
-                            <div className="bg-red-50 border border-red-100 rounded-2xl p-5 text-center">
-                                <p className="text-sm font-semibold text-red-500">
-                                    {leaderboardError}
+                    {/* CARD 2: BẢNG XẾP HẠNG */}
+                    <div className="bg-[var(--theme-surface)] border border-slate-200/70 rounded-3xl shadow-xs p-5 sm:p-6">
+                        {/* Header Card 2 */}
+                        <div className="flex items-start justify-between gap-4 mb-5">
+                            <div>
+                                <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                                    {modeTitle}
+                                </h2>
+                                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                                    {selectedGradeName} &nbsp;·&nbsp;{" "}
+                                    {selectedSubjectName}
                                 </p>
-                                <button
-                                    type="button"
-                                    onClick={() => void loadLeaderboard()}
-                                    className="mt-4 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition"
-                                >
-                                    Thử lại
-                                </button>
                             </div>
-                        </div>
-                    )}
 
-                    {/* EMPTY */}
-                    {!isLoadingLeaderboard &&
-                        !leaderboardError &&
-                        rankings.length === 0 && (
-                            <div className="px-4 sm:px-6 py-10 text-center">
-                                <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center">
-                                    <Medal className="w-7 h-7 text-slate-400" />
-                                </div>
-                                <p className="mt-4 font-semibold text-[var(--theme-text)]">
-                                    Chưa có dữ liệu xếp hạng cho bộ lọc này
-                                </p>
-                                <p className="mt-1 text-xs text-slate-400">
-                                    Hãy hoàn thành bài{" "}
-                                    {mode === "practice"
-                                        ? "luyện tập chủ đề"
-                                        : mode === "exam"
-                                          ? "luyện thi"
-                                          : "luyện tập hoặc đề thi"}{" "}
-                                    ở phạm vi{" "}
-                                    <b>
-                                        {selectedGradeName} -{" "}
-                                        {selectedSubjectName}
-                                    </b>{" "}
-                                    để ghi danh lên bảng vàng!
+                            <span className="inline-flex items-center rounded-full bg-[#F3E8FF] px-3.5 py-1.5 text-xs font-semibold text-[#7C3AED] shrink-0">
+                                {rankings.length} học sinh
+                            </span>
+                        </div>
+
+                        {/* Loading */}
+                        {isLoadingLeaderboard && (
+                            <div className="py-12 text-center">
+                                <div className="animate-spin mx-auto w-7 h-7 border-2 border-purple-200 border-t-[#7C3AED] rounded-full" />
+                                <p className="mt-3 text-xs text-slate-500">
+                                    Đang tải bảng xếp hạng...
                                 </p>
                             </div>
                         )}
 
-                    {/* LEADERBOARD LIST */}
-                    {!isLoadingLeaderboard &&
-                        !leaderboardError &&
-                        rankings.length > 0 && (
-                            <div className="px-4 sm:px-6 mt-5 space-y-3">
-                                {rankingPagination.pageItems.map((player) => {
-                                    const isTopThree = player.rank <= 3;
-                                    const isMe =
-                                        myProfile?.id === player.studentId;
+                        {/* Error */}
+                        {leaderboardError && (
+                            <div className="py-8">
+                                <div className="bg-red-50 border border-red-100 rounded-2xl p-5 text-center">
+                                    <p className="text-sm font-semibold text-red-500">
+                                        {leaderboardError}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => void loadLeaderboard()}
+                                        className="mt-3 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition"
+                                    >
+                                        Thử lại
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
-                                    return (
-                                        <div
-                                            key={player.studentId}
-                                            className={`relative rounded-2xl p-4 border transition ${
-                                                isMe
-                                                    ? "bg-blue-50/40 border-blue-400 ring-1 ring-blue-300 shadow-sm"
-                                                    : isTopThree
-                                                      ? "bg-[var(--theme-surface)] border-amber-200/80 shadow-sm"
-                                                      : "bg-[var(--theme-surface)] border-[var(--theme-border)]"
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                {/* RANK */}
-                                                <div className="w-9 shrink-0 text-center">
-                                                    {player.rank === 1 && (
-                                                        <div className="flex flex-col items-center">
-                                                            <Trophy className="w-5 h-5 text-yellow-500" />
-                                                            <span className="text-[10px] font-black text-yellow-600 mt-0.5">
-                                                                #1
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {player.rank === 2 && (
-                                                        <div className="flex flex-col items-center">
-                                                            <Medal className="w-5 h-5 text-slate-400" />
-                                                            <span className="text-[10px] font-black text-slate-500 mt-0.5">
-                                                                #2
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {player.rank === 3 && (
-                                                        <div className="flex flex-col items-center">
-                                                            <Medal className="w-5 h-5 text-orange-400" />
-                                                            <span className="text-[10px] font-black text-orange-500 mt-0.5">
-                                                                #3
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {player.rank > 3 && (
-                                                        <span className="text-sm font-black text-slate-400">
-                                                            #{player.rank}
-                                                        </span>
-                                                    )}
-                                                </div>
+                        {/* Empty */}
+                        {!isLoadingLeaderboard &&
+                            !leaderboardError &&
+                            rankings.length === 0 && (
+                                <div className="py-12 text-center border-y border-slate-100">
+                                    <p className="text-sm font-semibold text-slate-700">
+                                        Chưa có dữ liệu xếp hạng
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-400">
+                                        Chưa có học sinh nào hoàn thành bài ở bộ
+                                        lọc{" "}
+                                        <b>
+                                            {selectedGradeName} ·{" "}
+                                            {selectedSubjectName}
+                                        </b>
+                                        .
+                                    </p>
+                                </div>
+                            )}
 
-                                                {/* AVATAR */}
-                                                <div
-                                                    className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 font-bold text-sm ${
-                                                        player.rank === 1
-                                                            ? "bg-yellow-100 text-yellow-700"
-                                                            : player.rank === 2
-                                                              ? "bg-slate-100 text-slate-600"
-                                                              : player.rank ===
-                                                                  3
-                                                                ? "bg-orange-100 text-orange-600"
-                                                                : "bg-blue-50 text-blue-600"
-                                                    }`}
-                                                >
-                                                    {player.name?.[0]?.toUpperCase() || (
-                                                        <User className="w-5 h-5" />
-                                                    )}
-                                                </div>
+                        {/* Table */}
+                        {!isLoadingLeaderboard &&
+                            !leaderboardError &&
+                            rankings.length > 0 && (
+                                <div className="overflow-x-auto -mx-5 sm:-mx-6 px-5 sm:px-6">
+                                    <table className="w-full min-w-[640px] border-collapse">
+                                        <thead>
+                                            <tr className="bg-[#FAFAFC] border-y border-slate-100 text-left text-xs font-medium text-slate-500">
+                                                <th className="py-3 pl-3 pr-2 w-16 font-medium">
+                                                    Hạng
+                                                </th>
+                                                <th className="py-3 px-3 font-medium">
+                                                    Học sinh
+                                                </th>
+                                                <th className="py-3 px-3 w-28 font-medium"></th>
+                                                <th className="py-3 px-3 w-28 font-medium">
+                                                    Câu đã làm
+                                                </th>
+                                                <th className="py-3 px-3 w-32 font-medium">
+                                                    Câu đúng
+                                                </th>
+                                                <th className="py-3 px-3 w-32 font-medium">
+                                                    Điểm tích lũy
+                                                </th>
+                                                <th className="py-3 pl-3 pr-3 w-24 text-right font-medium">
+                                                    Điểm TB
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {rankingPagination.pageItems.map(
+                                                (player) => {
+                                                    const isFirst =
+                                                        player.rank === 1;
+                                                    const isMe =
+                                                        myProfile?.id ===
+                                                        player.studentId;
 
-                                                {/* STUDENT INFO */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <p className="font-bold text-sm text-[var(--theme-text)] truncate">
-                                                            {player.name}
-                                                        </p>
-                                                        {isMe && (
-                                                            <span className="text-[9px] font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                                                                Bạn
-                                                            </span>
-                                                        )}
-                                                        {player.khoi && (
-                                                            <span className="text-[9px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                                                                {player.khoi}
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    return (
+                                                        <tr
+                                                            key={
+                                                                player.studentId
+                                                            }
+                                                            className={`transition-colors ${
+                                                                isFirst
+                                                                    ? "bg-[#FAF5FF]/70"
+                                                                    : isMe
+                                                                      ? "bg-purple-50/40"
+                                                                      : "bg-white hover:bg-slate-50/60"
+                                                            }`}
+                                                        >
+                                                            {/* Hạng */}
+                                                            <td className="py-4 pl-3 pr-2 align-middle">
+                                                                <div
+                                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold ${
+                                                                        isFirst
+                                                                            ? "bg-[#F3E8FF] text-[#7C3AED]"
+                                                                            : "bg-slate-100 text-slate-600"
+                                                                    }`}
+                                                                >
+                                                                    {
+                                                                        player.rank
+                                                                    }
+                                                                </div>
+                                                            </td>
 
-                                                    <p className="text-[11px] text-[var(--theme-text-light)] mt-1">
-                                                        {mode === "practice"
-                                                            ? `${player.totalPractices} lượt luyện tập chủ đề`
-                                                            : mode === "exam"
-                                                              ? `${player.totalExams} đề luyện thi`
-                                                              : `${player.totalPractices} luyện tập · ${player.totalExams} đề thi`}
-                                                    </p>
-                                                </div>
+                                                            {/* Học sinh */}
+                                                            <td className="py-4 px-3 align-middle">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-semibold text-sm text-slate-900">
+                                                                        {
+                                                                            player.name
+                                                                        }
+                                                                    </span>
+                                                                    {isMe && (
+                                                                        <span className="text-[10px] font-semibold bg-[#F3E8FF] text-[#7C3AED] px-2 py-0.5 rounded-md">
+                                                                            Bạn
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                                    {mode ===
+                                                                    "practice"
+                                                                        ? `${player.totalPractices} luyện tập`
+                                                                        : mode ===
+                                                                            "exam"
+                                                                          ? `${player.totalExams} đề thi`
+                                                                          : `${player.totalPractices} luyện tập · ${player.totalExams} đề thi`}
+                                                                </p>
+                                                            </td>
 
-                                                {/* SCORE */}
-                                                <div className="text-right shrink-0">
-                                                    <p className="font-display font-extrabold text-lg text-[var(--theme-text)]">
-                                                        {player.score.toFixed(
-                                                            2
-                                                        )}
-                                                    </p>
-                                                    <p className="text-[10px] text-[var(--theme-text-light)]">
-                                                        điểm TB
-                                                    </p>
-                                                </div>
-                                            </div>
+                                                            {/* Khối */}
+                                                            <td className="py-4 px-3 align-middle">
+                                                                {player.khoi && (
+                                                                    <span className="inline-block bg-slate-100 text-slate-600 text-[11px] font-medium px-2.5 py-1 rounded-md">
+                                                                        {
+                                                                            player.khoi
+                                                                        }
+                                                                    </span>
+                                                                )}
+                                                            </td>
 
-                                            {/* STATS FOOTER */}
-                                            <div className="mt-3 pt-3 border-t border-[var(--theme-border)] flex items-center justify-between text-[11px] text-slate-400">
-                                                <div>
-                                                    <span className="font-bold text-slate-600">
-                                                        {player.totalQuestions}
-                                                    </span>{" "}
-                                                    câu đã làm
-                                                </div>
+                                                            {/* Câu đã làm */}
+                                                            <td className="py-4 px-3 align-middle text-sm font-medium text-slate-800">
+                                                                {
+                                                                    player.totalQuestions
+                                                                }
+                                                            </td>
 
-                                                <div>
-                                                    <span className="font-bold text-emerald-600">
-                                                        {
-                                                            player.totalCorrectAnswers
-                                                        }
-                                                    </span>{" "}
-                                                    câu đúng ({player.accuracy}
-                                                    %)
-                                                </div>
+                                                            {/* Câu đúng */}
+                                                            <td className="py-4 px-3 align-middle text-sm font-medium text-emerald-700">
+                                                                {
+                                                                    player.totalCorrectAnswers
+                                                                }{" "}
+                                                                (
+                                                                {
+                                                                    player.accuracy
+                                                                }
+                                                                %)
+                                                            </td>
 
-                                                <div>
-                                                    <span className="font-bold text-amber-600">
-                                                        {player.points}
-                                                    </span>{" "}
-                                                    điểm tích lũy
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                                            {/* Điểm tích lũy */}
+                                                            <td className="py-4 px-3 align-middle text-sm font-medium text-slate-800">
+                                                                {player.points}
+                                                            </td>
 
+                                                            {/* Điểm TB */}
+                                                            <td className="py-4 pl-3 pr-3 align-middle text-right">
+                                                                <span
+                                                                    className={`text-lg sm:text-xl font-bold ${
+                                                                        isFirst
+                                                                            ? "text-[#7C3AED]"
+                                                                            : "text-slate-900"
+                                                                    }`}
+                                                                >
+                                                                    {player.score.toFixed(
+                                                                        2
+                                                                    )}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                        {/* Footer caption & pagination */}
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <p className="text-xs text-slate-400">
+                                {modeSubtitle}
+                            </p>
+                            {rankings.length > rankingPagination.pageSize && (
                                 <Pagination
                                     page={rankingPagination.page}
                                     pageSize={rankingPagination.pageSize}
@@ -613,8 +551,9 @@ export default function LeaderboardView({
                                     onPageChange={rankingPagination.setPage}
                                     itemLabel="học sinh"
                                 />
-                            </div>
-                        )}
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
