@@ -163,8 +163,8 @@ export default function LeaderboardView({
         <div
             className={
                 isEmbeddedTab
-                    ? "flex-1 flex flex-col h-full overflow-hidden bg-[var(--theme-bg)]"
-                    : "absolute inset-0 bg-[var(--theme-bg)] z-50 flex flex-col animate-fade-in overflow-hidden sm:rounded-[32px]"
+                    ? "flex-1 flex flex-col h-full overflow-hidden bg-[#F6F4FB]"
+                    : "absolute inset-0 bg-[#F6F4FB] z-50 flex flex-col animate-fade-in overflow-hidden sm:rounded-[32px]"
             }
         >
             {/* HEADER (khi mở dạng modal từ trang Cá nhân) */}
@@ -396,7 +396,7 @@ export default function LeaderboardView({
                                 <div className="overflow-x-auto -mx-5 sm:-mx-6 px-5 sm:px-6">
                                     <table className="w-full min-w-[640px] border-collapse">
                                         <thead>
-                                            <tr className="bg-[#FAFAFC] border-y border-slate-100 text-left text-xs font-medium text-slate-500">
+                                            <tr className="bg-[#F8F6FC] text-left text-xs font-medium text-slate-500">
                                                 <th className="py-3 pl-3 pr-2 w-16 font-medium">
                                                     Hạng
                                                 </th>
