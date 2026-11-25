@@ -11,5 +11,10 @@ public class GetLeaderboardQuery
 
     public Guid? SubjectId { get; set; }
 
-    public int Limit { get; set; } = 10;
+    /// <summary>
+    /// "all" (Tổng hợp), "practice" (Luyện tập), "exam" (Luyện thi)
+    /// </summary>
+    public string? Mode { get; set; } = "all";
+
+    public int Limit { get; set; } = 50;
 }

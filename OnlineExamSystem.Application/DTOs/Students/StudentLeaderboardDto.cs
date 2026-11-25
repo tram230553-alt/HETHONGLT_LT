@@ -6,9 +6,7 @@ public class StudentLeaderboardDto
 
     public Guid StudentId { get; set; }
 
-    public string StudentName { get; set; }
-        = string.Empty;
-
+    public string StudentName { get; set; } = string.Empty;
 
     public Guid? GradeId { get; set; }
 
@@ -17,6 +15,10 @@ public class StudentLeaderboardDto
     public double AverageScore { get; set; }
 
     public int TotalExams { get; set; }
+
+    public int TotalPractices { get; set; }
+
+    public int TotalAttempts { get; set; }
 
     public int TotalCorrectAnswers { get; set; }
 

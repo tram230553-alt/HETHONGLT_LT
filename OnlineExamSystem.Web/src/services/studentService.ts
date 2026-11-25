@@ -199,6 +199,10 @@ export interface StudentLeaderboardDto {
 
     totalExams: number;
 
+    totalPractices?: number;
+
+    totalAttempts?: number;
+
     totalCorrectAnswers: number;
 
     totalQuestions: number;
@@ -362,6 +366,7 @@ export function getStudentLeaderboard(
     params?: {
         gradeId?: string;
         subjectId?: string;
+        mode?: "all" | "practice" | "exam";
         limit?: number;
     },
 ) {
@@ -379,6 +384,13 @@ export function getStudentLeaderboard(
         searchParams.set(
             "subjectId",
             params.subjectId,
+        );
+    }
+
+    if (params?.mode) {
+        searchParams.set(
+            "mode",
+            params.mode,
         );
     }
 

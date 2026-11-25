@@ -31,6 +31,7 @@ import {
   PanelLeftOpen,
   Menu,
   Bell,
+  Trophy,
 } from "lucide-react";
 
 import DeviceFrame from "./components/DeviceFrame";
@@ -40,6 +41,7 @@ import TopicTab from "./components/TopicTab";
 import PracticeTab from "./components/PracticeTab";
 import ResultsTab from "./components/ResultsTab";
 import ProfileTab from "./components/ProfileTab";
+import LeaderboardView from "./components/LeaderboardView";
 import FlashcardDecks from "./components/FlashcardDecks";
 import AIAssistantBubble from "./components/AIAssistantBubble";
 
@@ -534,6 +536,8 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                     }}
                 />
             );
+        case 6:
+            return <LeaderboardView isEmbeddedTab />;
       default:
         return null;
     }
@@ -545,29 +549,31 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
         "Game Luyện tập",
         "Luyện đề",
         "Kết quả",
-        "Cá nhân"
+        "Cá nhân",
+        "Bảng xếp hạng"
     ][activeTab];
 
     const navigationItems = [
-        { label: "Trang chủ", icon: Home },
-        { label: "Chủ đề học", icon: BookOpenCheck },
-        { label: "Game Luyện tập", icon: Gamepad2 },
-        { label: "Luyện đề", icon: BookOpenCheck },
-        { label: "Kết quả", icon: TrendingUp },
-        { label: "Cá nhân", icon: User },
+        { tabIndex: 0, label: "Trang chủ", icon: Home },
+        { tabIndex: 1, label: "Chủ đề học", icon: BookOpenCheck },
+        { tabIndex: 2, label: "Game Luyện tập", icon: Gamepad2 },
+        { tabIndex: 3, label: "Luyện đề", icon: BookOpenCheck },
+        { tabIndex: 4, label: "Kết quả", icon: TrendingUp },
+        { tabIndex: 6, label: "Bảng xếp hạng", icon: Trophy },
+        { tabIndex: 5, label: "Cá nhân", icon: User },
     ];
 
   const renderNavigation = (mobile = false) => (
     <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-1.5 no-scrollbar">
-      {navigationItems.map((item, idx) => {
+      {navigationItems.map((item) => {
         const Icon = item.icon;
-        const isActive = activeTab === idx;
+        const isActive = activeTab === item.tabIndex;
         return (
           <button
             key={item.label}
-            id={`nav-tab-${idx}`}
+            id={`nav-tab-${item.tabIndex}`}
             onClick={() => {
-              setActiveTab(idx);
+              setActiveTab(item.tabIndex);
               if (mobile) setMobileSidebarOpen(false);
             }}
             className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition-all active:scale-[0.98] ${
