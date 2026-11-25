@@ -46,6 +46,7 @@ import AIAssistantBubble from "./components/AIAssistantBubble";
 import { UserStats, CleanHistoryItem, SubjectId } from "./types";
 import { DEFAULT_USER_STATS } from "./data";
 import { addLearningActivity, clearActivities } from "./utils/activityLogger";
+import { recordStudiedMissionTopic } from "./utils/dailyMissionPlan";
 
 export interface StudentPortalAppProps {
   onLogout: () => void;
@@ -73,6 +74,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
     );
   // 1. CHỈ SỐ NAVIGATION TAB (0 = Home, 1 = Chủ đề học, 2 = Luyện đề, 3 = Kết quả, 4 = Cá nhân)
     const [activeTab, setActiveTab] = React.useState<number>(0);
+    const [topicReturnTab, setTopicReturnTab] = React.useState<number>(1);
     const [
         selectedTopic,
         setSelectedTopic,
@@ -394,6 +396,11 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
               setActiveTab(3);
             }}
             onNavigateToExam={handleNavigateToExam}
+            onSelectMissionTopic={(topic) => {
+              setTopicReturnTab(0);
+              setSelectedTopic(topic);
+              setActiveTab(1);
+            }}
           />
         );
         case 1:
@@ -403,8 +410,23 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
                         topic={selectedTopic}
                         onBack={() => {
                             setSelectedTopic(null);
+                            if (topicReturnTab === 0) {
+                                setTopicReturnTab(1);
+                                setActiveTab(0);
+                            }
                         }}
                         onEarnStars={handleEarnStars}
+                        onCompleteTopic={(completedTopic) => {
+                            const updatedMission = recordStudiedMissionTopic(completedTopic.id);
+                            setStats((prev) => {
+                                const next = {
+                                    ...prev,
+                                    currentStreak: updatedMission.streakDays,
+                                };
+                                localStorage.setItem("smartexam_user_stats", JSON.stringify(next));
+                                return next;
+                            });
+                        }}
                         onStartWordGame={() => {
                             const topicToPlay = selectedTopic;
                             setSelectedTopic(null);
@@ -424,6 +446,7 @@ export default function StudentPortalApp({ onLogout, loginEmail }: StudentPortal
             return (
                 <TopicTab
                     onSelectTopic={(topic) => {
+                        setTopicReturnTab(1);
                         setSelectedTopic(topic);
                     }}
                 />

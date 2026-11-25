@@ -4,19 +4,25 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { 
-  Flame, 
-  Sparkles, 
-  BookOpen, 
-  GraduationCap, 
-  Play, 
-  CheckCircle2, 
+import {
+  Flame,
+  Sparkles,
+  BookOpen,
+  GraduationCap,
+  Play,
+  CheckCircle2,
   TrendingUp,
   Award,
   RefreshCw
 } from "lucide-react";
 import { UserStats, SubjectId } from "../types";
 import { getStudentDashboard, type StudentDashboardDto } from "../../services/studentDashboardService";
+import { topicService, type TopicDto } from "../../services/topicService";
+import {
+  syncDailyMissionPlan,
+  startNewMissionCycle,
+  type SyncedMissionPlan,
+} from "../utils/dailyMissionPlan";
 import StudentNotificationBell from "./StudentNotificationBell";
 
 interface HomeTabProps {
@@ -27,18 +33,22 @@ interface HomeTabProps {
   onSwitchTab?: (tabIndex: number) => void;
   onSelectSubjectForPractice?: (subjectId: SubjectId) => void;
   onNavigateToExam?: (subjectId: SubjectId, examId: string) => void;
+  onSelectMissionTopic?: (topic: TopicDto) => void;
 }
 
-export default function HomeTab({ 
-  stats, 
-  onIncrementTime, 
-  onOpenFlashcards, 
+export default function HomeTab({
+  stats,
+  onIncrementTime,
+  onOpenFlashcards,
   onOpenAIChat,
   onSwitchTab,
   onSelectSubjectForPractice,
-  onNavigateToExam
+  onNavigateToExam,
+  onSelectMissionTopic
 }: HomeTabProps) {
   const [dashboard, setDashboard] = useState<StudentDashboardDto | null>(null);
+  const [allTopics, setAllTopics] = useState<TopicDto[]>([]);
+  const [missionPlan, setMissionPlan] = useState<SyncedMissionPlan | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState('');
 
@@ -46,8 +56,16 @@ export default function HomeTab({
     let active = true;
     const load = async () => {
       try {
-        const data = await getStudentDashboard();
-        if (active) { setDashboard(data); setDashboardError(''); }
+        const [data, studentTopics] = await Promise.all([
+          getStudentDashboard(),
+          topicService.getStudentTopics().catch(() => [] as TopicDto[]),
+        ]);
+        if (active) {
+          setDashboard(data);
+          setAllTopics(studentTopics);
+          setMissionPlan(syncDailyMissionPlan(studentTopics));
+          setDashboardError('');
+        }
       } catch (error) {
         if (active) setDashboardError(error instanceof Error ? error.message : 'Không tải được dữ liệu trang chủ.');
       } finally {
@@ -59,7 +77,28 @@ export default function HomeTab({
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 
-  const progressPercent = Math.round(((dashboard?.activeDaysLast7 ?? 0) / 7) * 100);
+  useEffect(() => {
+    if (allTopics.length === 0) return;
+    const handleMissionUpdate = () => {
+      setMissionPlan(syncDailyMissionPlan(allTopics));
+    };
+    window.addEventListener("smartexam_daily_mission_updated", handleMissionUpdate);
+    return () => {
+      window.removeEventListener("smartexam_daily_mission_updated", handleMissionUpdate);
+    };
+  }, [allTopics]);
+
+  const effectiveProgressDays = missionPlan
+    ? missionPlan.state.progressDays
+    : Math.min(7, dashboard?.activeDaysLast7 ?? 0);
+  const effectiveStreak = missionPlan
+    ? missionPlan.state.streakDays
+    : (dashboard?.currentStreak ?? 0);
+  const progressPercent = Math.min(
+    100,
+    Math.round((effectiveProgressDays / 7) * 100)
+  );
+  const todayStudiedCount = missionPlan?.state.todayStudiedCount ?? 0;
   const combinedAverage = useMemo(() => {
     if (!dashboard) return 0;
     const count = dashboard.totalExamAttempts + dashboard.totalPracticeAttempts;
@@ -76,7 +115,7 @@ export default function HomeTab({
     <div className="flex-1 overflow-y-auto px-5 md:px-8 xl:px-10 py-4 md:py-7 space-y-5 md:space-y-6 no-scrollbar scroll-smooth">
       {dashboardLoading && <div className="flex items-center justify-center rounded-2xl border border-[#E9EDF7] bg-[var(--theme-surface)] p-3 text-xs font-bold text-slate-500"><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Đang tải dữ liệu học tập...</div>}
       {dashboardError && <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">{dashboardError}</div>}
-      
+
       {/* 1. HEADER (Avatar, Student Name, Rank & Bell Icon) */}
       <div className="flex items-center justify-between bg-[var(--theme-surface)] p-4 rounded-3xl border border-[#E9EDF7] shadow-soft relative">
         <div className="flex items-center gap-3">
@@ -113,7 +152,7 @@ export default function HomeTab({
           {/* Chỉ số Streak nhanh của Duolingo */}
           <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-3 py-1.5 rounded-full border border-amber-200/40 shadow-sm">
             <Flame className="w-4 h-4 fill-amber-500 text-amber-500 animate-pulse" />
-            <span className="text-xs font-extrabold font-mono">{dashboard?.currentStreak ?? 0}d</span>
+            <span className="text-xs font-extrabold font-mono">{effectiveStreak}d</span>
           </div>
         </div>
       </div>
@@ -139,15 +178,18 @@ export default function HomeTab({
           {/* Bộ điều khiển mục tiêu trong banner */}
           <div className="bg-[var(--theme-surface)]/10 p-3 rounded-2xl border border-white/15 flex items-center justify-between backdrop-blur-xs">
             <div className="space-y-0.5">
-              <span className="text-[9px] text-blue-200 uppercase font-mono font-bold">Hoạt động tuần</span>
-              <p className="text-xs font-bold font-display">{dashboard?.activeDaysLast7 ?? 0} / 7 ngày có làm bài</p>
+              <span className="text-[9px] text-blue-200 uppercase font-mono font-bold">Mục tiêu 7 ngày</span>
+              <p className="text-xs font-bold font-display">{effectiveProgressDays} / 7 ngày hoàn thành</p>
             </div>
-            
+
             <button
               id="btn-add-study-minutes-home"
               onClick={() => {
-                if (onSwitchTab) {
-                  onSwitchTab(1); // Chuyển hướng sang Chủ đề học (tab 1)
+                const firstPlanned = missionPlan?.plannedTopics?.[0];
+                if (firstPlanned && onSelectMissionTopic) {
+                  onSelectMissionTopic(firstPlanned);
+                } else if (onSwitchTab) {
+                  onSwitchTab(1);
                 }
               }}
               className="bg-[var(--theme-surface)] text-[var(--theme-primary)] hover:bg-blue-50 active:scale-95 transition-all font-extrabold text-[10px] py-1.5 px-3 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
@@ -156,17 +198,19 @@ export default function HomeTab({
             </button>
           </div>
 
-          {/* Thanh Tiến trình trực quan */}
+          {/* Thanh Tiến trình trực quan (mục tiêu 7 ngày) */}
           <div className="space-y-1">
-            <div className="w-full h-2 bg-[var(--theme-surface)]/25 rounded-full overflow-hidden">
-              <div 
+            <div className="w-full h-2.5 bg-[var(--theme-surface)]/25 rounded-full overflow-hidden">
+              <div
                 className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 transition-all duration-700 rounded-full"
                 style={{ width: `${progressPercent}%` }}
               ></div>
             </div>
             <div className="flex justify-between text-[9px] text-blue-100 font-mono">
-              <span>Đạt {progressPercent}% hoạt động tuần</span>
-              <span>{(dashboard?.totalExamAttempts ?? 0) + (dashboard?.totalPracticeAttempts ?? 0)} lượt làm đã lưu</span>
+              <span>Đạt {progressPercent}% mục tiêu 7 ngày ({effectiveProgressDays}/7)</span>
+              <span>
+                Đã học {missionPlan?.completedTopicsCount ?? 0}/{missionPlan?.totalTopicsCount ?? (dashboard?.activeTopicCount ?? 0)} chủ đề
+              </span>
             </div>
           </div>
         </div>
@@ -187,7 +231,7 @@ export default function HomeTab({
             </div>
             <div className="min-w-0">
               <span className="text-[10px] uppercase font-bold text-slate-400 font-sans">Chuỗi Học Tập</span>
-              <p className="text-xs font-bold text-[var(--theme-text)] truncate font-display">{dashboard?.currentStreak ?? 0} ngày liên tục</p>
+              <p className="text-xs font-bold text-[var(--theme-text)] truncate font-display">{effectiveStreak} ngày liên tục</p>
             </div>
           </div>
 
@@ -219,40 +263,107 @@ export default function HomeTab({
               <TrendingUp className="w-5.5 h-5.5" />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] uppercase font-bold text-slate-400 font-sans">Tiến Độ Tuần</span>
-              <p className="text-xs font-bold text-[var(--theme-text)] truncate font-display">{dashboard?.activeDaysLast7 ?? 0} / 7 ngày học tập</p>
+              <span className="text-[10px] uppercase font-bold text-slate-400 font-sans">Tiến Độ 7 Ngày</span>
+              <p className="text-xs font-bold text-[var(--theme-text)] truncate font-display">{effectiveProgressDays} / 7 ngày học tập</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 4. TODAY'S TASKS TIMELINE (Available Exams) */}
+      {/* 4. TODAY'S TASKS TIMELINE (3 Topics of 3 distinct Subjects, only rotated when studied) */}
       <div className="bg-[var(--theme-surface)] p-4.5 rounded-3xl border border-[#E9EDF7] space-y-4 shadow-soft">
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center justify-between px-1 gap-2">
           <div>
             <h5 className="font-display font-bold text-[var(--theme-text)] text-sm">Lịch Nhiệm Vụ Hôm Nay</h5>
-            <span className="text-[10px] text-slate-400 font-sans">Các chặng học cần đạt để giữ vững kế hoạch</span>
+            <span className="text-[10px] text-slate-400 font-sans">
+              3 chủ đề từ 3 môn khác nhau · Chỉ đổi sang môn tiếp theo khi bạn đã hoàn thành bài học
+            </span>
           </div>
-          <span className="text-[9px] bg-red-100 text-red-600 font-bold px-2 py-0.5 rounded-full animate-pulse">
-            Chưa Hoàn Thành
-          </span>
+          {missionPlan?.allTopicsCompleted ? (
+            <span className="text-[9px] bg-emerald-100 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full shrink-0">
+              Hoàn tất tất cả các môn 🎉
+            </span>
+          ) : todayStudiedCount >= 3 ? (
+            <span className="text-[9px] bg-emerald-100 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full shrink-0">
+              Hoàn Thành ({todayStudiedCount}/3) ✓
+            </span>
+          ) : todayStudiedCount > 0 ? (
+            <span className="text-[9px] bg-blue-100 text-blue-700 font-extrabold px-2.5 py-0.5 rounded-full shrink-0">
+              Đã học {todayStudiedCount}/3 chủ đề
+            </span>
+          ) : (
+            <span className="text-[9px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full animate-pulse shrink-0">
+              Chưa Hoàn Thành (0/3)
+            </span>
+          )}
         </div>
 
         <div className="relative pl-6 space-y-5">
           <div className="absolute left-[9px] top-1.5 bottom-1.5 w-0.5 bg-[#E9EDF7]"></div>
-          {(dashboard?.availableExams ?? []).slice(0, 3).map((exam, index) => {
+          {(missionPlan?.plannedTopics ?? []).map((topic, index) => {
             const styles = [
               { marker: 'bg-blue-500', label: 'text-blue-500', button: 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200' },
               { marker: 'bg-emerald-500', label: 'text-emerald-500', button: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200' },
               { marker: 'bg-amber-500', label: 'text-amber-500', button: 'bg-amber-50 hover:bg-amber-100 text-amber-600 border-amber-200' },
             ];
             const style = styles[index] ?? styles[0];
-            return <div key={exam.examId} className="relative group">
-              <div className={`absolute -left-[23px] top-1.5 w-4 h-4 ${style.marker} border-2 border-white rounded-full flex items-center justify-center shadow-sm`}><div className="w-1.5 h-1.5 bg-[var(--theme-surface)] rounded-full"></div></div>
-              <div className="flex items-start justify-between gap-4"><div className="space-y-0.5"><span className={`text-[8px] uppercase font-bold ${style.label} font-mono tracking-wider`}>{exam.subjectName} · {exam.durationMinutes} phút</span><p className="text-xs font-bold text-[var(--theme-text)] leading-snug">{exam.examName}</p><p className="text-[10px] text-slate-400 font-sans leading-relaxed">{exam.totalQuestions} câu hỏi · Giáo viên {exam.teacherName}</p></div><button onClick={() => onSwitchTab?.(2)} className={`${style.button} font-extrabold text-[9px] py-1 px-2.5 rounded-lg border transition whitespace-nowrap`}>Làm bài</button></div>
-            </div>;
+            return (
+              <div key={topic.id} className="relative group">
+                <div className={`absolute -left-[23px] top-1.5 w-4 h-4 ${style.marker} border-2 border-white rounded-full flex items-center justify-center shadow-sm`}>
+                  <div className="w-1.5 h-1.5 bg-[var(--theme-surface)] rounded-full"></div>
+                </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className={`text-[9px] uppercase font-extrabold ${style.label} font-mono tracking-wider`}>
+                      Môn {topic.subjectName} · {topic.questionCount} câu hỏi
+                    </span>
+                    <p className="text-xs font-bold text-[var(--theme-text)] leading-snug">
+                      {topic.name}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-sans leading-relaxed">
+                      {topic.chapterName ? `${topic.chapterName} · ` : ''}Học xong sẽ lấp đầy thanh tiến độ 7 ngày & tăng chuỗi học tập
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (onSelectMissionTopic) {
+                        onSelectMissionTopic(topic);
+                      } else {
+                        onSwitchTab?.(1);
+                      }
+                    }}
+                    className={`${style.button} font-extrabold text-[10px] py-1.5 px-3 rounded-lg border transition whitespace-nowrap cursor-pointer active:scale-95`}
+                  >
+                    Học ngay
+                  </button>
+                </div>
+              </div>
+            );
           })}
-          {!dashboardLoading && (dashboard?.availableExams.length ?? 0) === 0 && <p className="py-4 text-center text-xs italic text-slate-400">Hiện chưa có đề thi được phát hành cho khối của bạn.</p>}
+
+          {missionPlan?.allTopicsCompleted && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-center space-y-2.5">
+              <p className="text-xs font-bold text-emerald-800">
+                🎉 Chúc mừng! Bạn đã học hoàn thành toàn bộ {missionPlan.totalTopicsCount} chủ đề của tất cả {missionPlan.totalSubjectsCount} môn học!
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  startNewMissionCycle();
+                  setMissionPlan(syncDailyMissionPlan(allTopics));
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-[11px] font-extrabold text-white shadow-xs hover:bg-emerald-700 transition cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Bắt đầu chu kỳ ôn tập mới
+              </button>
+            </div>
+          )}
+
+          {!dashboardLoading && !missionPlan?.allTopicsCompleted && (missionPlan?.plannedTopics.length ?? 0) === 0 && (
+            <p className="py-4 text-center text-xs italic text-slate-400">
+              Hiện chưa có chủ đề học tập nào cho khối của bạn.
+            </p>
+          )}
         </div>
       </div>
 
@@ -311,7 +422,7 @@ export default function HomeTab({
                 }}
               >
                 <div className="flex justify-between items-start">
-                  <div 
+                  <div
                     className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shadow-sm"
                     style={{ backgroundColor: `${color}25`, color }}
                   >
@@ -328,7 +439,7 @@ export default function HomeTab({
                   </h6>
                   {/* Slider tiến độ từng môn */}
                   <div className="w-full bg-[#E9EDF7] h-1.5 rounded-full overflow-hidden mt-1.5">
-                    <div 
+                    <div
                       className="h-full transition-all duration-500 rounded-full"
                       style={{ width: `${progress}%`, backgroundColor: color }}
                     ></div>

@@ -29,6 +29,7 @@ interface TopicPracticeViewProps {
     onStartWordGame?: () => void;
     onStartChessGame?: () => void;
     onEarnStars?: (amount: number) => void;
+    onCompleteTopic?: (topic: TopicDto) => void;
 }
 
 export default function TopicPracticeView({
@@ -37,6 +38,7 @@ export default function TopicPracticeView({
     onStartWordGame,
     onStartChessGame,
     onEarnStars,
+    onCompleteTopic,
 }: TopicPracticeViewProps) {
     const [questions, setQuestions] =
         React.useState<PracticeQuestionDto[]>([]);
@@ -175,6 +177,9 @@ export default function TopicPracticeView({
             setLastEarnedStars(earned);
             if (onEarnStars) {
                 onEarnStars(earned);
+            }
+            if (onCompleteTopic) {
+                onCompleteTopic(topic);
             }
 
             setShowSubmitConfirm(false);
