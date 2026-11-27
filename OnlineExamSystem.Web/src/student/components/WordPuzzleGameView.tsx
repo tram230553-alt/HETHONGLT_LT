@@ -385,7 +385,7 @@ export default function WordPuzzleGameView({
 
     // Hiệu ứng trạng thái
     const [solvedCurrent, setSolvedCurrent] = useState(false);
-    const [showHint, setShowHint] = useState(false);
+    const [revealedHintCount, setRevealedHintCount] = useState(0);
     const [shakeWrong, setShakeWrong] = useState(false);
     const [starToast, setStarToast] = useState<string | null>(null);
 
@@ -457,7 +457,7 @@ export default function WordPuzzleGameView({
         setTargetPath(path);
         setSelectedCells([]);
         setSolvedCurrent(false);
-        setShowHint(false);
+        setRevealedHintCount(0);
         setShakeWrong(false);
         setCurrentIndex(index);
     };
@@ -596,9 +596,9 @@ export default function WordPuzzleGameView({
         };
     }, [isDragging, handlePointerUp]);
 
-    // Bấm nút "Gợi ý" (Dùng 1 ⭐ tích lũy)
+    // Bấm nút "Gợi ý" (Dùng 1 ⭐ tích lũy mỗi lần, mở từng chữ cái một theo thứ tự)
     const handleHint = () => {
-        if (solvedCurrent || showHint) return;
+        if (solvedCurrent || revealedHintCount >= targetPath.length) return;
 
         // Kiểm tra học sinh có đủ sao tích lũy không
         const currentStars = userStars ?? 0;
@@ -618,10 +618,11 @@ export default function WordPuzzleGameView({
             }
         }
 
-        setShowHint(true);
-        setStarToast("Đã dùng 1 ⭐ để mở gợi ý câu hỏi!");
+        const nextCount = revealedHintCount + 1;
+        setRevealedHintCount(nextCount);
+        setStarToast(`Đã dùng 1 ⭐ để mở gợi ý chữ thứ ${nextCount}/${targetPath.length}!`);
         setTimeout(() => setStarToast(null), 2500);
-        sounds.playSelect(4);
+        sounds.playSelect(Math.min(nextCount + 2, 10));
     };
 
     // Bấm nút "Bỏ qua →"
@@ -651,7 +652,7 @@ export default function WordPuzzleGameView({
     // Chơi lại
     const handleRestart = () => {
         setScore(0);
-        setTimeLeft(120);
+        setTimeLeft(Math.max(120, questions.length * 30));
         setCorrectCount(0);
         setWrongCount(0);
         setHistoryResults([]);
@@ -778,6 +779,11 @@ export default function WordPuzzleGameView({
                     <div className="mt-5 flex items-center justify-center gap-2 flex-wrap min-h-[46px]">
                         {Array.from({ length: targetWordLength }).map((_, idx) => {
                             const filledLetter = selectedCells[idx]?.letter;
+                            const hintedLetter =
+                                idx < revealedHintCount
+                                    ? (currentQuestion?.wordAnswer || "").toUpperCase()[idx]
+                                    : undefined;
+                            const displayLetter = filledLetter || hintedLetter || "";
                             const isCorrectState = solvedCurrent;
 
                             return (
@@ -788,10 +794,12 @@ export default function WordPuzzleGameView({
                                             ? isCorrectState
                                                 ? "border-2 border-emerald-500 bg-emerald-50 text-emerald-700 scale-105 shadow-sm"
                                                 : "border-2 border-purple-500 bg-purple-50 text-purple-700 scale-105 shadow-sm"
+                                            : hintedLetter
+                                            ? "border-2 border-amber-400 bg-amber-50 text-amber-700 shadow-xs"
                                             : "border-2 border-dashed border-slate-300 bg-transparent text-transparent"
                                     }`}
                                 >
-                                    {filledLetter || ""}
+                                    {displayLetter}
                                 </div>
                             );
                         })}
@@ -827,9 +835,13 @@ export default function WordPuzzleGameView({
                             {grid.map((row) =>
                                 row.map((cell) => {
                                     const isSelected = selectedCells.some((c) => c.id === cell.id);
-                                    const isHinted =
-                                        showHint &&
-                                        targetPath.slice(0, 2).some(([r, c]) => r === cell.row && c === cell.col);
+                                    const hintOrder =
+                                        revealedHintCount > 0
+                                            ? targetPath
+                                                  .slice(0, revealedHintCount)
+                                                  .findIndex(([r, c]) => r === cell.row && c === cell.col)
+                                            : -1;
+                                    const isHinted = hintOrder !== -1;
                                     const cellSizeClass =
                                         "h-11 w-11 sm:h-13 sm:w-13 text-lg sm:text-2xl rounded-xl";
 
@@ -847,6 +859,11 @@ export default function WordPuzzleGameView({
                                             }`}
                                         >
                                             {cell.letter}
+                                            {isHinted && !isSelected && (
+                                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-[9px] font-black text-white shadow-xs">
+                                                    {hintOrder + 1}
+                                                </span>
+                                            )}
                                         </div>
                                     );
                                 }),
@@ -857,16 +874,20 @@ export default function WordPuzzleGameView({
 
                 {/* 4. ACTIONS: GỢI Ý (⭐ 1) & BỎ QUA */}
                 <div className="mt-2 flex items-center justify-center gap-4">
-                    {/* Nút Gợi ý (tốn 1 sao tích lũy) */}
+                    {/* Nút Gợi ý (tốn 1 sao tích lũy mỗi lần, mở từng chữ cái) */}
                     <button
                         type="button"
                         onClick={handleHint}
-                        disabled={solvedCurrent || showHint}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-white hover:bg-amber-50 disabled:opacity-40 disabled:pointer-events-none px-6 py-2.5 text-xs md:text-sm font-black text-amber-700 shadow-sm transition active:scale-95 border border-amber-200"
-                        title="Dùng 1 sao tích điểm để mở gợi ý"
+                        disabled={solvedCurrent || revealedHintCount >= targetPath.length}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white hover:bg-amber-50 disabled:opacity-40 disabled:pointer-events-none px-6 py-2.5 text-xs md:text-sm font-black text-amber-700 shadow-sm transition active:scale-95 border border-amber-200 cursor-pointer"
+                        title="Dùng 1 sao tích điểm để mở gợi ý thêm 1 chữ cái"
                     >
                         <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
-                        Gợi ý (1 ⭐)
+                        {revealedHintCount >= targetPath.length && targetPath.length > 0
+                            ? "Đã gợi ý hết"
+                            : revealedHintCount > 0
+                              ? `Gợi ý tiếp (${revealedHintCount}/${targetPath.length}) · 1 ⭐`
+                              : "Gợi ý 1 chữ (1 ⭐)"}
                     </button>
 
                     {/* Nút Bỏ qua câu hỏi */}
