@@ -163,104 +163,74 @@ class SoundEffects {
 const sounds = new SoundEffects();
 
 /* =========================================================
-   GRID GENERATOR (AlphaBetty style random walk)
+   GRID GENERATOR (Straight-line Word Search: Horizontal, Vertical, Diagonal)
 ========================================================= */
 
-const DIRECTIONS = [
-    [-1, 0], [1, 0], [0, -1], [0, 1],
-    [-1, -1], [-1, 1], [1, -1], [1, 1],
+const STRAIGHT_DIRECTIONS: [number, number][] = [
+    [0, 1],   // Ngang (trái → phải)
+    [1, 0],   // Dọc (trên → dưới)
+    [1, 1],   // Chéo xuống phải
+    [1, -1],  // Chéo xuống trái
+    [-1, 1],  // Chéo lên phải
 ];
 
 const FILLER_LETTERS = "AABCDEEEGHIKLMNNNOOPPQRSTTUUVXY";
 
 function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number, number][] } {
     const cleaned = (targetWord || "").toUpperCase().replace(/[^A-Z0-9À-Ỹ]/g, "");
-    const wordLen = cleaned.length || 3;
-    const size = wordLen > 8 ? 5 : 4; // 4x4 or 5x5
+    const wordLen = Math.max(cleaned.length, 2);
+    // Đảm bảo kích thước bàn cờ đủ lớn để đặt từ theo một đường thẳng (ngang, dọc hoặc chéo)
+    const size = Math.max(4, wordLen);
 
-    for (let attempt = 0; attempt < 80; attempt++) {
-        const matrix: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
-        const visited = new Set<string>();
-        const path: [number, number][] = [];
+    const matrix: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
+    const path: [number, number][] = [];
 
-        const startR = Math.floor(Math.random() * size);
-        const startC = Math.floor(Math.random() * size);
+    // Chọn ngẫu nhiên một hướng thẳng (ngang, dọc, chéo)
+    const shuffledDirs = [...STRAIGHT_DIRECTIONS].sort(() => Math.random() - 0.5);
 
-        let currR = startR;
-        let currC = startC;
-        matrix[currR][currC] = cleaned[0] || "A";
-        visited.add(`${currR},${currC}`);
-        path.push([currR, currC]);
+    let placed = false;
+    for (const [dr, dc] of shuffledDirs) {
+        const minR = dr === -1 ? wordLen - 1 : 0;
+        const maxR = dr === 1 ? size - wordLen : size - 1;
+        const minC = dc === -1 ? wordLen - 1 : 0;
+        const maxC = dc === 1 ? size - wordLen : size - 1;
 
-        let success = true;
-        for (let i = 1; i < wordLen; i++) {
-            const shuffled = [...DIRECTIONS].sort(() => Math.random() - 0.5);
-            let nextR = -1;
-            let nextC = -1;
+        if (minR <= maxR && minC <= maxC) {
+            const startR = minR + Math.floor(Math.random() * (maxR - minR + 1));
+            const startC = minC + Math.floor(Math.random() * (maxC - minC + 1));
 
-            for (const [dr, dc] of shuffled) {
-                const nr = currR + dr;
-                const nc = currC + dc;
-                if (nr >= 0 && nr < size && nc >= 0 && nc < size && !visited.has(`${nr},${nc}`)) {
-                    nextR = nr;
-                    nextC = nc;
-                    break;
-                }
+            for (let i = 0; i < wordLen; i++) {
+                const r = startR + dr * i;
+                const c = startC + dc * i;
+                matrix[r][c] = cleaned[i] || "A";
+                path.push([r, c]);
             }
-
-            if (nextR === -1) {
-                success = false;
-                break;
-            }
-
-            currR = nextR;
-            currC = nextC;
-            matrix[currR][currC] = cleaned[i];
-            visited.add(`${currR},${currC}`);
-            path.push([currR, currC]);
-        }
-
-        if (success) {
-            const pathMap = new Map<string, number>();
-            path.forEach(([r, c], idx) => pathMap.set(`${r},${c}`, idx));
-
-            const grid: Cell[][] = [];
-            for (let r = 0; r < size; r++) {
-                const rowCells: Cell[] = [];
-                for (let c = 0; c < size; c++) {
-                    const isTarget = pathMap.has(`${r},${c}`);
-                    const targetIdx = pathMap.get(`${r},${c}`);
-                    let char = matrix[r][c];
-                    if (!char) {
-                        char = FILLER_LETTERS[Math.floor(Math.random() * FILLER_LETTERS.length)];
-                    }
-                    const color = PASTEL_COLORS[(r * size + c) % PASTEL_COLORS.length];
-                    rowCells.push({
-                        id: `c-${r}-${c}`,
-                        row: r,
-                        col: c,
-                        letter: char,
-                        colorClass: color,
-                        isTarget,
-                        targetIndex: targetIdx,
-                    });
-                }
-                grid.push(rowCells);
-            }
-            return { grid, path };
+            placed = true;
+            break;
         }
     }
 
-    // Fallback: xếp thẳng hàng
+    // Fallback an toàn: đặt ngang ở hàng đầu tiên
+    if (!placed) {
+        for (let i = 0; i < wordLen; i++) {
+            matrix[0][i] = cleaned[i] || "A";
+            path.push([0, i]);
+        }
+    }
+
+    const pathMap = new Map<string, number>();
+    path.forEach(([r, c], idx) => pathMap.set(`${r},${c}`, idx));
+
     const grid: Cell[][] = [];
-    const path: [number, number][] = [];
     for (let r = 0; r < size; r++) {
         const rowCells: Cell[] = [];
         for (let c = 0; c < size; c++) {
-            const idx = r * size + c;
-            const isTarget = idx < wordLen;
-            const char = isTarget ? cleaned[idx] : FILLER_LETTERS[Math.floor(Math.random() * FILLER_LETTERS.length)];
-            if (isTarget) path.push([r, c]);
+            const isTarget = pathMap.has(`${r},${c}`);
+            const targetIdx = pathMap.get(`${r},${c}`);
+            let char = matrix[r][c];
+            if (!char) {
+                char = FILLER_LETTERS[Math.floor(Math.random() * FILLER_LETTERS.length)];
+            }
             const color = PASTEL_COLORS[(r * size + c) % PASTEL_COLORS.length];
             rowCells.push({
                 id: `c-${r}-${c}`,
@@ -269,11 +239,12 @@ function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number
                 letter: char,
                 colorClass: color,
                 isTarget,
-                targetIndex: isTarget ? idx : undefined,
+                targetIndex: targetIdx,
             });
         }
         grid.push(rowCells);
     }
+
     return { grid, path };
 }
 
@@ -403,11 +374,6 @@ export default function WordPuzzleGameView({
         return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     };
 
-    // Kiểm tra tính liền kề (8 hướng)
-    const isAdjacent = (c1: Cell, c2: Cell) => {
-        return Math.abs(c1.row - c2.row) <= 1 && Math.abs(c1.col - c2.col) <= 1;
-    };
-
     // Bắt đầu vuốt từ 1 ô
     const handleCellPointerDown = (cell: Cell) => {
         if (solvedCurrent) return;
@@ -416,33 +382,38 @@ export default function WordPuzzleGameView({
         sounds.playSelect(0);
     };
 
-    // Di chuyển qua ô kế tiếp
+    // Di chuyển qua ô kế tiếp (chỉ cho phép chọn theo đường thẳng: ngang, dọc hoặc chéo)
     const handleCellPointerEnter = (cell: Cell) => {
-        if (!isDragging || solvedCurrent) return;
+        if (!isDragging || solvedCurrent || selectedCells.length === 0) return;
 
-        // Nếu ô trùng với ô cuối cùng
-        if (selectedCells.length > 0 && selectedCells[selectedCells.length - 1].id === cell.id) {
-            return;
+        const startCell = selectedCells[0];
+        const dr = cell.row - startCell.row;
+        const dc = cell.col - startCell.col;
+
+        // Chỉ chấp nhận khi nằm trên cùng đường ngang, dọc hoặc chéo với ô bắt đầu
+        const isStraightLine = dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc);
+        if (!isStraightLine) return;
+
+        const stepR = Math.sign(dr);
+        const stepC = Math.sign(dc);
+        const steps = Math.max(Math.abs(dr), Math.abs(dc));
+
+        const lineCells: Cell[] = [];
+        for (let i = 0; i <= steps; i++) {
+            const r = startCell.row + stepR * i;
+            const c = startCell.col + stepC * i;
+            const target = grid[r]?.[c];
+            if (target) {
+                lineCells.push(target);
+            }
         }
 
-        // Quay lui (undo ô trước)
-        if (selectedCells.length >= 2 && selectedCells[selectedCells.length - 2].id === cell.id) {
-            setSelectedCells((prev) => prev.slice(0, prev.length - 1));
-            sounds.playSelect(selectedCells.length - 2);
-            return;
-        }
-
-        // Tránh chọn lại ô đã có
-        if (selectedCells.some((c) => c.id === cell.id)) {
-            return;
-        }
-
-        // Kiểm tra liền kề
-        const lastCell = selectedCells[selectedCells.length - 1];
-        if (lastCell && isAdjacent(lastCell, cell)) {
-            const nextList = [...selectedCells, cell];
-            setSelectedCells(nextList);
-            sounds.playSelect(nextList.length);
+        // Chỉ cập nhật và phát âm thanh nếu danh sách ô thay đổi
+        const lastPrev = selectedCells[selectedCells.length - 1];
+        const lastNext = lineCells[lineCells.length - 1];
+        if (lastNext && (lineCells.length !== selectedCells.length || lastPrev?.id !== lastNext.id)) {
+            setSelectedCells(lineCells);
+            sounds.playSelect(Math.max(0, lineCells.length - 1));
         }
     };
 
@@ -716,7 +687,7 @@ export default function WordPuzzleGameView({
 
                     {/* Hướng dẫn nhỏ */}
                     <p className="mt-3 text-[11px] md:text-xs font-medium text-slate-400">
-                        Vuốt qua các chữ liền kề để ghép đáp án
+                        Vuốt theo đường ngang, dọc hoặc chéo để ghép đáp án
                     </p>
 
                     {/* Giải thích sau khi trả lời đúng */}
@@ -736,7 +707,7 @@ export default function WordPuzzleGameView({
                         }`}
                     >
                         <div
-                            className="grid gap-2.5 md:gap-3"
+                            className={`grid ${grid.length > 7 ? "gap-1.5" : "gap-2 sm:gap-2.5 md:gap-3"}`}
                             style={{
                                 gridTemplateColumns: `repeat(${grid.length || 4}, minmax(0, 1fr))`,
                             }}
@@ -747,13 +718,19 @@ export default function WordPuzzleGameView({
                                     const isHinted =
                                         showHint &&
                                         targetPath.slice(0, 2).some(([r, c]) => r === cell.row && c === cell.col);
+                                    const cellSizeClass =
+                                        grid.length <= 5
+                                            ? "h-14 w-14 sm:h-16 sm:w-16 text-2xl sm:text-3xl rounded-2xl"
+                                            : grid.length <= 7
+                                            ? "h-10 w-10 sm:h-12 sm:w-12 text-lg sm:text-2xl rounded-xl"
+                                            : "h-8 w-8 sm:h-10 sm:w-10 text-sm sm:text-lg rounded-lg";
 
                                     return (
                                         <div
                                             key={cell.id}
                                             onPointerDown={() => handleCellPointerDown(cell)}
                                             onPointerEnter={() => handleCellPointerEnter(cell)}
-                                            className={`relative flex h-14 w-14 sm:h-16 sm:w-16 cursor-pointer items-center justify-center rounded-2xl text-2xl sm:text-3xl font-black transition-all duration-150 select-none shadow-xs ${
+                                            className={`relative flex cursor-pointer items-center justify-center font-black transition-all duration-150 select-none shadow-xs ${cellSizeClass} ${
                                                 isSelected
                                                     ? "bg-[#a855f7] text-white scale-105 shadow-md shadow-purple-300 ring-2 ring-purple-400"
                                                     : isHinted
