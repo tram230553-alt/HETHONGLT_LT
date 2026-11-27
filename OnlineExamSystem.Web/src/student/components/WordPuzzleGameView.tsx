@@ -174,94 +174,121 @@ const STRAIGHT_DIRECTIONS: [number, number][] = [
     [-1, 1],  // Chéo lên phải
 ];
 
+const FIXED_GRID_SIZE = 6;
 const FILLER_LETTERS = "AABCDEEEGHIKLMNNNOOPPQRSTTUUVXY";
 
-function buildForwardZigZagPath(wordLen: number): { path: [number, number][]; size: number } {
+function buildForwardZigZagPath(wordLen: number, size: number): [number, number][] {
     // Tạo đường zíc-zắc tiến gồm 2-3 đoạn thẳng vuông góc (chỉ đi phải [0,1] và xuống [1,0], không bao giờ đi ngược)
-    const numSegments = wordLen >= 6 ? 3 : 2;
-    const lengths: number[] = [];
-    let remaining = wordLen - 1; // tổng số bước di chuyển
+    // Đảm bảo luôn nằm trọn trong lưới cố định size x size (với 6x6 chứa được tối đa 11 chữ cái)
+    const maxSpan = size - 1;
+    const totalSteps = wordLen - 1;
 
-    for (let s = 0; s < numSegments; s++) {
-        const segsLeft = numSegments - s;
-        if (s === numSegments - 1) {
-            lengths.push(remaining);
+    // Chọn tổng số bước sang phải và đi xuống sao cho cả hai đều <= maxSpan
+    const minRight = Math.max(1, totalSteps - maxSpan);
+    const maxRight = Math.min(maxSpan, totalSteps - 1);
+    const totalRight = minRight + Math.floor(Math.random() * (maxRight - minRight + 1));
+    const totalDown = totalSteps - totalRight;
+
+    // Chia thành 2 đoạn (chữ L) hoặc 3 đoạn (chữ Z tiến)
+    const segments: { dr: number; dc: number; len: number }[] = [];
+    const wantThreeSegs = wordLen >= 5 && (totalRight >= 2 || totalDown >= 2) && Math.random() < 0.65;
+
+    if (wantThreeSegs) {
+        const startHorizontal =
+            totalRight >= 2 && totalDown >= 2 ? Math.random() < 0.5 : totalRight >= 2;
+        if (startHorizontal) {
+            const r1 = 1 + Math.floor(Math.random() * (totalRight - 1));
+            const r2 = totalRight - r1;
+            segments.push({ dr: 0, dc: 1, len: r1 });
+            segments.push({ dr: 1, dc: 0, len: totalDown });
+            segments.push({ dr: 0, dc: 1, len: r2 });
         } else {
-            const minLen = 1;
-            const maxLen = Math.max(1, remaining - (segsLeft - 1));
-            const ideal = Math.max(minLen, Math.min(maxLen, Math.round(remaining / segsLeft)));
-            const chosen = minLen + Math.floor(Math.random() * (Math.min(maxLen, ideal + 1) - minLen + 1));
-            lengths.push(chosen);
-            remaining -= chosen;
+            const d1 = 1 + Math.floor(Math.random() * (totalDown - 1));
+            const d2 = totalDown - d1;
+            segments.push({ dr: 1, dc: 0, len: d1 });
+            segments.push({ dr: 0, dc: 1, len: totalRight });
+            segments.push({ dr: 1, dc: 0, len: d2 });
+        }
+    } else {
+        if (Math.random() < 0.5) {
+            segments.push({ dr: 0, dc: 1, len: totalRight });
+            segments.push({ dr: 1, dc: 0, len: totalDown });
+        } else {
+            segments.push({ dr: 1, dc: 0, len: totalDown });
+            segments.push({ dr: 0, dc: 1, len: totalRight });
         }
     }
 
-    // Luân phiên hướng ngang [0, 1] và dọc [1, 0]
-    let horizontal = Math.random() < 0.5;
-    const rawPath: [number, number][] = [[0, 0]];
-    let r = 0;
-    let c = 0;
-    for (const segLen of lengths) {
-        const dr = horizontal ? 0 : 1;
-        const dc = horizontal ? 1 : 0;
-        for (let i = 0; i < segLen; i++) {
-            r += dr;
-            c += dc;
-            rawPath.push([r, c]);
+    const offsetR = Math.floor(Math.random() * (size - totalDown));
+    const offsetC = Math.floor(Math.random() * (size - totalRight));
+
+    let r = offsetR;
+    let c = offsetC;
+    const path: [number, number][] = [[r, c]];
+    for (const seg of segments) {
+        for (let i = 0; i < seg.len; i++) {
+            r += seg.dr;
+            c += seg.dc;
+            path.push([r, c]);
         }
-        horizontal = !horizontal;
     }
 
-    const spanR = r + 1;
-    const spanC = c + 1;
-    const size = Math.max(4, spanR, spanC);
-
-    // Dịch chuyển ngẫu nhiên vào vị trí hợp lệ trong lưới size x size
-    const offsetR = Math.floor(Math.random() * (size - spanR + 1));
-    const offsetC = Math.floor(Math.random() * (size - spanC + 1));
-    const path: [number, number][] = rawPath.map(([pr, pc]) => [pr + offsetR, pc + offsetC]);
-
-    return { path, size };
+    return path;
 }
 
 function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number, number][] } {
     const cleaned = (targetWord || "").toUpperCase().replace(/[^A-Z0-9À-Ỹ]/g, "");
     const wordLen = Math.max(cleaned.length, 2);
+    const size = FIXED_GRID_SIZE; // Cố định lưới 6x6
 
-    // Với từ >= 4 ký tự: 50% xếp zíc-zắc tiến (đoạn thẳng bẻ góc 90°, không đi ngược), 50% xếp 1 đường thẳng (ngang, dọc, chéo)
-    // Với từ dài > 7 ký tự: ưu tiên zíc-zắc tiến để bảng cờ gọn đẹp, không quá to
-    const useZigZag = wordLen >= 4 && (wordLen > 7 || Math.random() < 0.5);
-
-    let size = Math.max(4, wordLen);
     let path: [number, number][] = [];
 
-    if (useZigZag) {
-        const zz = buildForwardZigZagPath(wordLen);
-        path = zz.path;
-        size = zz.size;
-    } else {
-        const shuffledDirs = [...STRAIGHT_DIRECTIONS].sort(() => Math.random() - 0.5);
-        for (const [dr, dc] of shuffledDirs) {
-            const minR = dr === -1 ? wordLen - 1 : 0;
-            const maxR = dr === 1 ? size - wordLen : size - 1;
-            const minC = dc === -1 ? wordLen - 1 : 0;
-            const maxC = dc === 1 ? size - wordLen : size - 1;
-
-            if (minR <= maxR && minC <= maxC) {
-                const startR = minR + Math.floor(Math.random() * (maxR - minR + 1));
-                const startC = minC + Math.floor(Math.random() * (maxC - minC + 1));
-
-                for (let i = 0; i < wordLen; i++) {
-                    path.push([startR + dr * i, startC + dc * i]);
-                }
-                break;
+    if (wordLen > size * 2 - 1) {
+        // Trường hợp hiếm: từ dài > 11 ký tự (12..15) vẫn xếp gọn theo hàng thẳng trong 6x6
+        let r = 0;
+        let c = 0;
+        let dir = 1;
+        for (let i = 0; i < Math.min(wordLen, size * size); i++) {
+            path.push([r, c]);
+            const nextC = c + dir;
+            if (nextC >= size || nextC < 0) {
+                r += 1;
+                dir = -dir;
+            } else {
+                c = nextC;
             }
         }
+    } else {
+        // Từ <= 6 ký tự: 50% đường thẳng (ngang/dọc/chéo), 50% zíc-zắc tiến (với từ >= 4 ký tự)
+        // Từ 7..11 ký tự: xếp zíc-zắc tiến (2-3 đoạn thẳng vuông góc) vừa khít 6x6
+        const useZigZag = wordLen > size || (wordLen >= 4 && Math.random() < 0.5);
 
-        // Fallback an toàn: đặt ngang ở hàng đầu tiên
-        if (path.length === 0) {
-            for (let i = 0; i < wordLen; i++) {
-                path.push([0, i]);
+        if (useZigZag) {
+            path = buildForwardZigZagPath(wordLen, size);
+        } else {
+            const shuffledDirs = [...STRAIGHT_DIRECTIONS].sort(() => Math.random() - 0.5);
+            for (const [dr, dc] of shuffledDirs) {
+                const minR = dr === -1 ? wordLen - 1 : 0;
+                const maxR = dr === 1 ? size - wordLen : size - 1;
+                const minC = dc === -1 ? wordLen - 1 : 0;
+                const maxC = dc === 1 ? size - wordLen : size - 1;
+
+                if (minR <= maxR && minC <= maxC) {
+                    const startR = minR + Math.floor(Math.random() * (maxR - minR + 1));
+                    const startC = minC + Math.floor(Math.random() * (maxC - minC + 1));
+
+                    for (let i = 0; i < wordLen; i++) {
+                        path.push([startR + dr * i, startC + dc * i]);
+                    }
+                    break;
+                }
+            }
+
+            // Fallback an toàn: đặt ngang ở hàng đầu tiên
+            if (path.length === 0) {
+                for (let i = 0; i < wordLen; i++) {
+                    path.push([0, i]);
+                }
             }
         }
     }
@@ -771,9 +798,9 @@ export default function WordPuzzleGameView({
                         }`}
                     >
                         <div
-                            className={`grid ${grid.length > 7 ? "gap-1.5" : "gap-2 sm:gap-2.5 md:gap-3"}`}
+                            className="grid gap-2 sm:gap-2.5"
                             style={{
-                                gridTemplateColumns: `repeat(${grid.length || 4}, minmax(0, 1fr))`,
+                                gridTemplateColumns: `repeat(${FIXED_GRID_SIZE}, minmax(0, 1fr))`,
                             }}
                         >
                             {grid.map((row) =>
@@ -783,11 +810,7 @@ export default function WordPuzzleGameView({
                                         showHint &&
                                         targetPath.slice(0, 2).some(([r, c]) => r === cell.row && c === cell.col);
                                     const cellSizeClass =
-                                        grid.length <= 5
-                                            ? "h-14 w-14 sm:h-16 sm:w-16 text-2xl sm:text-3xl rounded-2xl"
-                                            : grid.length <= 7
-                                            ? "h-10 w-10 sm:h-12 sm:w-12 text-lg sm:text-2xl rounded-xl"
-                                            : "h-8 w-8 sm:h-10 sm:w-10 text-sm sm:text-lg rounded-lg";
+                                        "h-11 w-11 sm:h-13 sm:w-13 text-lg sm:text-2xl rounded-xl";
 
                                     return (
                                         <div
