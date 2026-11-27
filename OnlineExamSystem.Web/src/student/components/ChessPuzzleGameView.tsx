@@ -582,12 +582,19 @@ export default function ChessPuzzleGameView({
 
                 allBlackMoves.sort((a, b) => b.score - a.score);
                 const chosen = allBlackMoves[0];
+                const capturedWhiteKing = currentBoard[chosen.to.r][chosen.to.c]?.type === "k";
                 const nextBoard = applyMoveOnBoard(currentBoard, chosen.from, chosen.to);
 
                 setBoard(nextBoard);
                 setLastMove({ from: chosen.from, to: chosen.to });
                 setIsAiThinking(false);
                 sounds.playMove();
+
+                if (capturedWhiteKing) {
+                    setFinishReason("Vua của bạn đã bị bắt! Ván cờ kết thúc.");
+                    setIsFinished(true);
+                    return;
+                }
 
                 // Kiểm tra xem quân Trắng còn nước đi hợp lệ không
                 let whiteHasMoves = false;
@@ -689,7 +696,7 @@ export default function ChessPuzzleGameView({
                 // Sau khi quân Trắng đi xong, đến lượt AI quân Đen phản hồi
                 triggerBlackAiMove(nextBoard);
             } else {
-                // Trả lời sai (hoặc hết giờ) -> Không được đi!
+                // Trả lời sai (hoặc hết giờ) -> Không được đi và mất lượt, đối thủ vẫn đi bình thường!
                 sounds.playWrong();
                 setWrongCount((w) => w + 1);
                 setPendingMove(null);
@@ -700,10 +707,13 @@ export default function ChessPuzzleGameView({
 
                 showToast(
                     studentAnswer === null
-                        ? `Hết giờ! Nước đi ${moveLabel} không được thực hiện.`
-                        : `Trả lời sai! Quân cờ không được di chuyển.`,
+                        ? `Hết giờ! Bạn mất lượt (${moveLabel} bị hủy), đến lượt đối thủ.`
+                        : `Trả lời sai! Bạn không được đi, đến lượt đối thủ.`,
                     "error",
                 );
+
+                // Đối thủ (quân Đen AI) vẫn thực hiện nước đi bình thường
+                triggerBlackAiMove(board);
             }
         },
         [pendingMove, board, onEarnGems, showToast, triggerBlackAiMove],
@@ -923,7 +933,7 @@ export default function ChessPuzzleGameView({
                     Cờ vua <span className="text-[#ec4899]">giải đố</span>
                 </h1>
                 <p className="mt-1 text-xs sm:text-sm font-medium text-slate-600 max-w-lg mx-auto leading-relaxed">
-                    Chọn nước đi, trả lời đúng câu hỏi thì quân mới được di chuyển. Tốt/Vua: Đúng-Sai · Mã/Tượng: Trắc nghiệm · Xe/Hậu: Tự luận.
+                    Chọn nước đi, trả lời đúng thì quân mới được di chuyển; trả lời sai sẽ mất lượt và đối thủ đi tiếp. Tốt/Vua: Đúng-Sai · Mã/Tượng: Trắc nghiệm · Xe/Hậu: Tự luận.
                 </p>
             </div>
 
