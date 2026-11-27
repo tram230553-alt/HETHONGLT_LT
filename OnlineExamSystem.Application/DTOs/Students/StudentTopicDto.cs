@@ -32,6 +32,10 @@
 
         public int QuestionCount { get; set; }
 
+        public int ChessQuestionCount { get; set; }
+
+        public int WordPuzzleQuestionCount { get; set; }
+
         public bool IsActive { get; set; }
     }
 }

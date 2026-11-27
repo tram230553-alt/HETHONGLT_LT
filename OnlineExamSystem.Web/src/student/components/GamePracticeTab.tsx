@@ -177,6 +177,10 @@ export default function GamePracticeTab({
     const [isPreparingGame, setIsPreparingGame] = useState(false);
     const [prepareError, setPrepareError] = useState<string | null>(null);
 
+    // Lưu cache số lượng câu hỏi khả dụng theo topic cho từng game
+    const [gameCountsByTopic, setGameCountsByTopic] = useState<Record<string, number>>({});
+    const [isLoadingGameCounts, setIsLoadingGameCounts] = useState(false);
+
     // Game đang chạy trực tiếp
     const [activeRunningGame, setActiveRunningGame] = useState<{
         mode: GameModeId;
@@ -208,19 +212,100 @@ export default function GamePracticeTab({
         };
     }, []);
 
-    // Nhóm danh sách các môn học kèm tổng số lượng câu hỏi
+    // Tải số lượng câu hỏi khả dụng cho Game đã chọn
+    useEffect(() => {
+        if (!selectedGameId || topics.length === 0) return;
+
+        // Nếu Backend đã trả về trường ChessQuestionCount / WordPuzzleQuestionCount
+        const hasBackendWordCount = selectedGameId === "word" && topics.some((t) => t.wordPuzzleQuestionCount !== undefined);
+        const hasBackendChessCount = selectedGameId === "chess" && topics.some((t) => t.chessQuestionCount !== undefined);
+
+        if (hasBackendWordCount || hasBackendChessCount) {
+            return;
+        }
+
+        let active = true;
+        const fetchGameCounts = async () => {
+            try {
+                setIsLoadingGameCounts(true);
+                const counts: Record<string, number> = {};
+
+                if (selectedGameId === "word") {
+                    await Promise.all(
+                        topics.map(async (t) => {
+                            try {
+                                const qList = await practiceService.getWordPuzzleQuestions(t.id);
+                                counts[t.id] = qList.length;
+                            } catch {
+                                counts[t.id] = 0;
+                            }
+                        }),
+                    );
+                } else if (selectedGameId === "chess") {
+                    await Promise.all(
+                        topics.map(async (t) => {
+                            try {
+                                const qList = await practiceService.getChessQuestions(t.id);
+                                counts[t.id] = qList.length;
+                            } catch {
+                                counts[t.id] = 0;
+                            }
+                        }),
+                    );
+                }
+
+                if (active) {
+                    setGameCountsByTopic(counts);
+                }
+            } catch (err) {
+                console.warn("Could not load dynamic game question counts:", err);
+            } finally {
+                if (active) setIsLoadingGameCounts(false);
+            }
+        };
+
+        void fetchGameCounts();
+        return () => {
+            active = false;
+        };
+    }, [selectedGameId, topics]);
+
+    // Nhóm danh sách các môn học kèm số lượng câu hỏi KHẢ DỤNG CHO GAME ĐÃ CHỌN
     const subjects = useMemo<SubjectItem[]>(() => {
         const map = new Map<string, { id: string; name: string; questionCount: number }>();
+
         topics.forEach((t) => {
             if (!t.subjectId) return;
+
+            let countForThisGame = 0;
+            if (selectedGameId === "word") {
+                if (gameCountsByTopic[t.id] !== undefined) {
+                    countForThisGame = gameCountsByTopic[t.id];
+                } else if (t.wordPuzzleQuestionCount !== undefined) {
+                    countForThisGame = t.wordPuzzleQuestionCount;
+                } else {
+                    countForThisGame = 0; // Tránh dùng t.questionCount vì câu trắc nghiệm không thể dùng cho nối chữ
+                }
+            } else if (selectedGameId === "chess") {
+                if (gameCountsByTopic[t.id] !== undefined) {
+                    countForThisGame = gameCountsByTopic[t.id];
+                } else if (t.chessQuestionCount !== undefined) {
+                    countForThisGame = t.chessQuestionCount;
+                } else {
+                    countForThisGame = t.questionCount || 0;
+                }
+            } else {
+                countForThisGame = t.questionCount || 0;
+            }
+
             const existing = map.get(t.subjectId);
             if (existing) {
-                existing.questionCount += (t.questionCount || 0);
+                existing.questionCount += countForThisGame;
             } else {
                 map.set(t.subjectId, {
                     id: t.subjectId,
                     name: t.subjectName || "Môn học",
-                    questionCount: t.questionCount || 0,
+                    questionCount: countForThisGame,
                 });
             }
         });
@@ -235,17 +320,27 @@ export default function GamePracticeTab({
                 iconBg: meta.iconBg,
             };
         });
-    }, [topics]);
+    }, [topics, selectedGameId, gameCountsByTopic]);
 
-    // Khi chuyển sang Bước 2, tự động chọn môn đầu tiên nếu chưa có môn nào được chọn
+    // Khi chuyển sang Bước 2, tự động chọn môn đầu tiên CÓ CÂU HỎI
     useEffect(() => {
         if (selectedGameId && subjects.length > 0 && selectedSubjectIds.length === 0) {
-            setSelectedSubjectIds([subjects[0].id]);
+            const firstAvailable = subjects.find((s) => s.questionCount > 0);
+            if (firstAvailable) {
+                setSelectedSubjectIds([firstAvailable.id]);
+            }
         }
     }, [selectedGameId, subjects, selectedSubjectIds.length]);
 
     // Toggle chọn / bỏ chọn môn học
     const handleToggleSubject = (subId: string) => {
+        const targetSub = subjects.find((s) => s.id === subId);
+        if (targetSub && targetSub.questionCount === 0) {
+            setPrepareError(`Môn ${targetSub.name} hiện chưa có câu hỏi phù hợp cho game này.`);
+            return;
+        }
+        setPrepareError(null);
+
         setSelectedSubjectIds((prev) => {
             if (prev.includes(subId)) {
                 return prev.filter((id) => id !== subId);
@@ -255,9 +350,10 @@ export default function GamePracticeTab({
         });
     };
 
-    // Chọn tất cả môn
+    // Chọn tất cả môn có câu hỏi
     const handleSelectAll = () => {
-        setSelectedSubjectIds(subjects.map((s) => s.id));
+        const available = subjects.filter((s) => s.questionCount > 0);
+        setSelectedSubjectIds(available.length > 0 ? available.map((s) => s.id) : subjects.map((s) => s.id));
     };
 
     // Bỏ chọn tất cả
@@ -465,15 +561,18 @@ export default function GamePracticeTab({
                     <div className="my-6 grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         {subjects.map((sub) => {
                             const isSelected = selectedSubjectIds.includes(sub.id);
+                            const isAvailable = sub.questionCount > 0;
                             return (
                                 <button
                                     key={sub.id}
                                     type="button"
                                     onClick={() => handleToggleSubject(sub.id)}
-                                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-200 active:scale-[0.99] text-left ${
+                                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-200 text-left ${
                                         isSelected
                                             ? "border-2 border-indigo-600 bg-white ring-2 ring-indigo-100 shadow-sm"
-                                            : "border border-slate-200/80 bg-white hover:border-slate-300"
+                                            : !isAvailable
+                                              ? "border border-slate-200/60 bg-slate-50/70 opacity-60 cursor-not-allowed"
+                                              : "border border-slate-200/80 bg-white hover:border-slate-300 active:scale-[0.99] cursor-pointer"
                                     }`}
                                 >
                                     <div className="flex items-center gap-3.5">
@@ -487,8 +586,14 @@ export default function GamePracticeTab({
                                             <h3 className="text-base font-black text-slate-900 leading-snug">
                                                 {sub.name}
                                             </h3>
-                                            <p className="mt-0.5 text-xs text-slate-500 font-medium">
-                                                {sub.questionCount > 0 ? `${sub.questionCount} câu hỏi` : "10 câu hỏi"}
+                                            <p className={`mt-0.5 text-xs font-medium ${isAvailable ? "text-slate-500" : "text-amber-600"}`}>
+                                                {isLoadingGameCounts ? (
+                                                    "Đang kiểm tra câu hỏi..."
+                                                ) : isAvailable ? (
+                                                    `${sub.questionCount} câu hỏi khả dụng`
+                                                ) : (
+                                                    "0 câu hỏi (Chưa có cho game này)"
+                                                )}
                                             </p>
                                         </div>
                                     </div>
@@ -498,6 +603,10 @@ export default function GamePracticeTab({
                                         {isSelected ? (
                                             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xs">
                                                 <Check className="h-3.5 w-3.5 stroke-[3]" />
+                                            </div>
+                                        ) : !isAvailable ? (
+                                            <div className="h-6 w-6 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-bold">
+                                                -
                                             </div>
                                         ) : (
                                             <div className="h-6 w-6 rounded-full border-2 border-slate-300 bg-slate-100/60" />

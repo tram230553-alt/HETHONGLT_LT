@@ -123,7 +123,20 @@ namespace OnlineExamSystem.Application.Features.Students.Queries.GetStudentTopic
                         IsActive = t.IsActive,
 
                         QuestionCount =
-                            t.Questions.Count()
+                            t.Questions.Count(),
+
+                        ChessQuestionCount =
+                            t.Questions.Count(q =>
+                                q.Type == "true_false" ||
+                                q.Type == "single_choice" ||
+                                q.Type == "multiple_choice" ||
+                                q.Type == "essay"),
+
+                        WordPuzzleQuestionCount =
+                            t.Questions.Count(q =>
+                                q.Type == "essay" &&
+                                q.CorrectAnswer != null &&
+                                q.CorrectAnswer != "")
                     })
                     .ToListAsync(
                         cancellationToken);

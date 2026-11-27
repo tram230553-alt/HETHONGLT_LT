@@ -20,6 +20,8 @@ export interface TopicDto {
     isActive: boolean;
 
     questionCount: number;
+    chessQuestionCount?: number;
+    wordPuzzleQuestionCount?: number;
     chapterId: string;
     chapterName: string;
     chapterOrder: number;
