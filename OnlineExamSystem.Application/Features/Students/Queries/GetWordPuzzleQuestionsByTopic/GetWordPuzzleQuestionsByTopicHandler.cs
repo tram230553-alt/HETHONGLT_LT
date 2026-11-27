@@ -47,17 +47,21 @@ public class GetWordPuzzleQuestionsByTopicHandler
             throw new KeyNotFoundException("Topic không tồn tại hoặc đã bị khóa.");
         }
 
-        // Lấy tất cả câu hỏi tự luận (essay) của chủ đề, không phân biệt cấp độ dễ/khó
-        var essayQuestions = await _context.Questions
+        // Lấy tất cả câu hỏi dạng điền/tự luận (essay, short_answer, fill_blank) của chủ đề
+        var textQuestions = await _context.Questions
             .AsNoTracking()
-            .Where(q => q.TopicId == request.TopicId && q.Type == "essay")
+            .Where(q =>
+                q.TopicId == request.TopicId &&
+                (q.Type == "essay" || q.Type == "short_answer" || q.Type == "fill_blank") &&
+                q.CorrectAnswer != null &&
+                q.CorrectAnswer != "")
             .OrderBy(q => q.CreatedAt)
             .ThenBy(q => q.Id)
             .ToListAsync(cancellationToken);
 
         var result = new List<StudentWordPuzzleQuestionDto>();
 
-        foreach (var q in essayQuestions)
+        foreach (var q in textQuestions)
         {
             var wordAnswer = ExtractEssayWordAnswer(q.CorrectAnswer);
             if (string.IsNullOrWhiteSpace(wordAnswer)) continue;
@@ -82,26 +86,45 @@ public class GetWordPuzzleQuestionsByTopicHandler
     {
         if (string.IsNullOrWhiteSpace(rawAnswer)) return string.Empty;
 
-        // Nếu câu tự luận có nhiều phương án chấp nhận (ngăn cách bởi dấu /, ;, | hoặc dấu phẩy)
+        const int MaxGridCells = 30; // Lưới 6x6 (36 ô) hỗ trợ mượt đáp án tới 30 ký tự
+
+        // Nếu câu hỏi có nhiều phương án chấp nhận (ngăn cách bởi /, ;, |, ,)
         var options = rawAnswer.Split(new[] { '/', ';', '|', ',' }, StringSplitOptions.RemoveEmptyEntries);
         foreach (var opt in options)
         {
             var cleaned = CleanWord(opt);
-            // Từ nối thích hợp trong ma trận chữ cái có độ dài từ 2 đến 15 ký tự
-            if (cleaned.Length >= 2 && cleaned.Length <= 15)
+            if (cleaned.Length >= 1 && cleaned.Length <= MaxGridCells)
             {
                 return cleaned;
             }
         }
 
-        // Fallback: làm sạch toàn bộ chuỗi đáp án
+        // Fallback 1: làm sạch toàn bộ chuỗi đáp án
         var fallbackCleaned = CleanWord(rawAnswer);
-        if (fallbackCleaned.Length >= 2 && fallbackCleaned.Length <= 15)
+        if (fallbackCleaned.Length >= 1 && fallbackCleaned.Length <= MaxGridCells)
         {
             return fallbackCleaned;
         }
 
-        return string.Empty;
+        // Fallback 2: nếu đáp án là câu dài > 30 ký tự, lấy cụm từ đầu tiên vừa khít lưới 6x6 để không bỏ sót câu hỏi
+        var words = rawAnswer.Trim().Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var built = string.Empty;
+        foreach (var w in words)
+        {
+            var cw = CleanWord(w);
+            if (string.IsNullOrEmpty(cw)) continue;
+            if (built.Length + cw.Length <= 24)
+            {
+                built += cw;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if (built.Length >= 1) return built;
+        return fallbackCleaned.Length > MaxGridCells ? fallbackCleaned.Substring(0, MaxGridCells) : fallbackCleaned;
     }
 
     private static string CleanWord(string? raw)

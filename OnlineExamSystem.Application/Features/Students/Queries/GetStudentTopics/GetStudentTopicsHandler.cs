@@ -134,7 +134,7 @@ namespace OnlineExamSystem.Application.Features.Students.Queries.GetStudentTopic
 
                         WordPuzzleQuestionCount =
                             t.Questions.Count(q =>
-                                q.Type == "essay" &&
+                                (q.Type == "essay" || q.Type == "short_answer" || q.Type == "fill_blank") &&
                                 q.CorrectAnswer != null &&
                                 q.CorrectAnswer != "")
                     })

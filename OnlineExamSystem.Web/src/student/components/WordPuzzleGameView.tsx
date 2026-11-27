@@ -263,7 +263,7 @@ function buildOrthogonalZigZagPath(wordLen: number, size: number): [number, numb
 
 function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number, number][] } {
     const cleaned = (targetWord || "").toUpperCase().replace(/[^A-Z0-9À-Ỹ]/g, "");
-    const wordLen = Math.max(cleaned.length, 2);
+    const wordLen = Math.max(cleaned.length, 1);
     const size = FIXED_GRID_SIZE; // Cố định lưới 6x6
 
     let path: [number, number][] = [];
@@ -397,6 +397,7 @@ export default function WordPuzzleGameView({
         let mounted = true;
         if (customQuestions && customQuestions.length > 0) {
             setQuestions(customQuestions);
+            setTimeLeft(Math.max(120, customQuestions.length * 30));
             initQuestion(0, customQuestions[0]);
             setLoading(false);
             return;
@@ -408,6 +409,7 @@ export default function WordPuzzleGameView({
                 const data = await practiceService.getWordPuzzleQuestions(topic.id);
                 if (mounted) {
                     setQuestions(data);
+                    setTimeLeft(Math.max(120, data.length * 30));
                     if (data.length > 0) {
                         initQuestion(0, data[0]);
                     }
