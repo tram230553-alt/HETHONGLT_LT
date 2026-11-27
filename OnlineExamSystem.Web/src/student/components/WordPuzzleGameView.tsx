@@ -177,63 +177,88 @@ const STRAIGHT_DIRECTIONS: [number, number][] = [
 const FIXED_GRID_SIZE = 6;
 const FILLER_LETTERS = "AABCDEEEGHIKLMNNNOOPPQRSTTUUVXY";
 
-function buildForwardZigZagPath(wordLen: number, size: number): [number, number][] {
-    // Tạo đường zíc-zắc tiến gồm 2-3 đoạn thẳng vuông góc (chỉ đi phải [0,1] và xuống [1,0], không bao giờ đi ngược)
-    // Đảm bảo luôn nằm trọn trong lưới cố định size x size (với 6x6 chứa được tối đa 11 chữ cái)
-    const maxSpan = size - 1;
-    const totalSteps = wordLen - 1;
+function buildOrthogonalZigZagPath(wordLen: number, size: number): [number, number][] | null {
+    // Tạo đường zíc-zắc gồm các đoạn thẳng ngang/dọc vuông góc 90° (cho phép cả tiến và lùi, KHÔNG đi chéo / không tự cắt X)
+    for (let attempt = 0; attempt < 120; attempt++) {
+        const startR = Math.floor(Math.random() * size);
+        const startC = Math.floor(Math.random() * size);
+        const visited = new Set<string>([`${startR},${startC}`]);
+        const path: [number, number][] = [[startR, startC]];
 
-    // Chọn tổng số bước sang phải và đi xuống sao cho cả hai đều <= maxSpan
-    const minRight = Math.max(1, totalSteps - maxSpan);
-    const maxRight = Math.min(maxSpan, totalSteps - 1);
-    const totalRight = minRight + Math.floor(Math.random() * (maxRight - minRight + 1));
-    const totalDown = totalSteps - totalRight;
+        let currR = startR;
+        let currC = startC;
+        let prevAxis: "h" | "v" | null = null;
+        let turns = 0;
 
-    // Chia thành 2 đoạn (chữ L) hoặc 3 đoạn (chữ Z tiến)
-    const segments: { dr: number; dc: number; len: number }[] = [];
-    const wantThreeSegs = wordLen >= 5 && (totalRight >= 2 || totalDown >= 2) && Math.random() < 0.65;
+        while (path.length < wordLen) {
+            const remaining = wordLen - path.length;
+            // Luân phiên trục ngang <-> dọc để tạo các đoạn thẳng gãy góc 90° rõ ràng
+            const nextAxis: "h" | "v" =
+                prevAxis === null
+                    ? Math.random() < 0.5
+                        ? "h"
+                        : "v"
+                    : prevAxis === "h"
+                      ? "v"
+                      : "h";
 
-    if (wantThreeSegs) {
-        const startHorizontal =
-            totalRight >= 2 && totalDown >= 2 ? Math.random() < 0.5 : totalRight >= 2;
-        if (startHorizontal) {
-            const r1 = 1 + Math.floor(Math.random() * (totalRight - 1));
-            const r2 = totalRight - r1;
-            segments.push({ dr: 0, dc: 1, len: r1 });
-            segments.push({ dr: 1, dc: 0, len: totalDown });
-            segments.push({ dr: 0, dc: 1, len: r2 });
-        } else {
-            const d1 = 1 + Math.floor(Math.random() * (totalDown - 1));
-            const d2 = totalDown - d1;
-            segments.push({ dr: 1, dc: 0, len: d1 });
-            segments.push({ dr: 0, dc: 1, len: totalRight });
-            segments.push({ dr: 1, dc: 0, len: d2 });
+            const candidateDirs: [number, number][] =
+                nextAxis === "h"
+                    ? [
+                          [0, 1],
+                          [0, -1],
+                      ]
+                    : [
+                          [1, 0],
+                          [-1, 0],
+                      ];
+            candidateDirs.sort(() => Math.random() - 0.5);
+
+            let moved = false;
+            for (const [dr, dc] of candidateDirs) {
+                // Đếm tối đa bao nhiêu ô trống liên tiếp theo hướng [dr, dc]
+                let maxAvail = 0;
+                while (maxAvail < remaining) {
+                    const nr = currR + dr * (maxAvail + 1);
+                    const nc = currC + dc * (maxAvail + 1);
+                    if (nr < 0 || nr >= size || nc < 0 || nc >= size || visited.has(`${nr},${nc}`)) {
+                        break;
+                    }
+                    maxAvail++;
+                }
+
+                if (maxAvail === 0) continue;
+
+                // Chọn độ dài đoạn thẳng (ưu tiên đoạn 2-4 ô để zíc-zắc đẹp mắt)
+                const desiredMax = Math.min(maxAvail, remaining > 2 && turns < 2 ? Math.max(2, remaining - 1) : maxAvail);
+                const minStep = maxAvail >= 2 && remaining >= 3 ? 2 : 1;
+                const segLen =
+                    minStep >= desiredMax
+                        ? desiredMax
+                        : minStep + Math.floor(Math.random() * (desiredMax - minStep + 1));
+
+                for (let s = 0; s < segLen; s++) {
+                    currR += dr;
+                    currC += dc;
+                    visited.add(`${currR},${currC}`);
+                    path.push([currR, currC]);
+                }
+
+                prevAxis = nextAxis;
+                turns++;
+                moved = true;
+                break;
+            }
+
+            if (!moved) break;
         }
-    } else {
-        if (Math.random() < 0.5) {
-            segments.push({ dr: 0, dc: 1, len: totalRight });
-            segments.push({ dr: 1, dc: 0, len: totalDown });
-        } else {
-            segments.push({ dr: 1, dc: 0, len: totalDown });
-            segments.push({ dr: 0, dc: 1, len: totalRight });
+
+        if (path.length === wordLen) {
+            return path;
         }
     }
 
-    const offsetR = Math.floor(Math.random() * (size - totalDown));
-    const offsetC = Math.floor(Math.random() * (size - totalRight));
-
-    let r = offsetR;
-    let c = offsetC;
-    const path: [number, number][] = [[r, c]];
-    for (const seg of segments) {
-        for (let i = 0; i < seg.len; i++) {
-            r += seg.dr;
-            c += seg.dc;
-            path.push([r, c]);
-        }
-    }
-
-    return path;
+    return null;
 }
 
 function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number, number][] } {
@@ -243,8 +268,39 @@ function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number
 
     let path: [number, number][] = [];
 
-    if (wordLen > size * 2 - 1) {
-        // Trường hợp hiếm: từ dài > 11 ký tự (12..15) vẫn xếp gọn theo hàng thẳng trong 6x6
+    // Từ <= 6 ký tự: 50% đường thẳng (ngang/dọc/chéo), 50% zíc-zắc vuông góc (với từ >= 4 ký tự)
+    // Từ > 6 ký tự: xếp zíc-zắc vuông góc (đoạn thẳng ngang/dọc, cả tiến lẫn lùi) vừa khít lưới 6x6
+    const useZigZag = wordLen > size || (wordLen >= 4 && Math.random() < 0.5);
+
+    if (useZigZag) {
+        const zzPath = buildOrthogonalZigZagPath(Math.min(wordLen, size * size), size);
+        if (zzPath) {
+            path = zzPath;
+        }
+    }
+
+    if (path.length === 0 && wordLen <= size) {
+        const shuffledDirs = [...STRAIGHT_DIRECTIONS].sort(() => Math.random() - 0.5);
+        for (const [dr, dc] of shuffledDirs) {
+            const minR = dr === -1 ? wordLen - 1 : 0;
+            const maxR = dr === 1 ? size - wordLen : size - 1;
+            const minC = dc === -1 ? wordLen - 1 : 0;
+            const maxC = dc === 1 ? size - wordLen : size - 1;
+
+            if (minR <= maxR && minC <= maxC) {
+                const startR = minR + Math.floor(Math.random() * (maxR - minR + 1));
+                const startC = minC + Math.floor(Math.random() * (maxC - minC + 1));
+
+                for (let i = 0; i < wordLen; i++) {
+                    path.push([startR + dr * i, startC + dc * i]);
+                }
+                break;
+            }
+        }
+    }
+
+    // Fallback an toàn: xếp rắn ngang vuông góc trong 6x6
+    if (path.length === 0) {
         let r = 0;
         let c = 0;
         let dir = 1;
@@ -256,39 +312,6 @@ function generatePuzzleGrid(targetWord: string): { grid: Cell[][]; path: [number
                 dir = -dir;
             } else {
                 c = nextC;
-            }
-        }
-    } else {
-        // Từ <= 6 ký tự: 50% đường thẳng (ngang/dọc/chéo), 50% zíc-zắc tiến (với từ >= 4 ký tự)
-        // Từ 7..11 ký tự: xếp zíc-zắc tiến (2-3 đoạn thẳng vuông góc) vừa khít 6x6
-        const useZigZag = wordLen > size || (wordLen >= 4 && Math.random() < 0.5);
-
-        if (useZigZag) {
-            path = buildForwardZigZagPath(wordLen, size);
-        } else {
-            const shuffledDirs = [...STRAIGHT_DIRECTIONS].sort(() => Math.random() - 0.5);
-            for (const [dr, dc] of shuffledDirs) {
-                const minR = dr === -1 ? wordLen - 1 : 0;
-                const maxR = dr === 1 ? size - wordLen : size - 1;
-                const minC = dc === -1 ? wordLen - 1 : 0;
-                const maxC = dc === 1 ? size - wordLen : size - 1;
-
-                if (minR <= maxR && minC <= maxC) {
-                    const startR = minR + Math.floor(Math.random() * (maxR - minR + 1));
-                    const startC = minC + Math.floor(Math.random() * (maxC - minC + 1));
-
-                    for (let i = 0; i < wordLen; i++) {
-                        path.push([startR + dr * i, startC + dc * i]);
-                    }
-                    break;
-                }
-            }
-
-            // Fallback an toàn: đặt ngang ở hàng đầu tiên
-            if (path.length === 0) {
-                for (let i = 0; i < wordLen; i++) {
-                    path.push([0, i]);
-                }
             }
         }
     }
@@ -461,7 +484,7 @@ export default function WordPuzzleGameView({
         sounds.playSelect(0);
     };
 
-    // Di chuyển qua ô kế tiếp (cho phép đường thẳng ngang/dọc/chéo và zíc-zắc tiến theo đoạn thẳng, KHÔNG cho đi ngược)
+    // Di chuyển qua ô kế tiếp (cho phép đường thẳng ngang/dọc/chéo và zíc-zắc vuông góc tiến & lùi, KHÔNG cho zíc-zắc chéo kiểu X)
     const handleCellPointerEnter = (cell: Cell) => {
         if (!isDragging || solvedCurrent || selectedCells.length === 0) return;
 
@@ -475,7 +498,7 @@ export default function WordPuzzleGameView({
             return;
         }
 
-        // Tránh chọn lại ô đã đi qua
+        // Tránh chọn lại ô đã đi qua (không tự cắt hình X)
         if (selectedCells.some((c) => c.id === cell.id)) return;
 
         // Phải liền kề với ô cuối cùng
@@ -483,24 +506,20 @@ export default function WordPuzzleGameView({
         const dc = cell.col - lastCell.col;
         if (Math.abs(dr) > 1 || Math.abs(dc) > 1) return;
 
-        // Kiểm tra không được nối zíc-zắc ngược (không đảo chiều hàng hoặc cột đã đi trước đó)
+        const isNextDiagonal = dr !== 0 && dc !== 0;
+
         if (selectedCells.length >= 2) {
-            let lockedRowDir = 0;
-            let lockedColDir = 0;
-            for (let i = 1; i < selectedCells.length; i++) {
-                const stepR = Math.sign(selectedCells[i].row - selectedCells[i - 1].row);
-                const stepC = Math.sign(selectedCells[i].col - selectedCells[i - 1].col);
-                if (stepR !== 0 && lockedRowDir === 0) lockedRowDir = stepR;
-                if (stepC !== 0 && lockedColDir === 0) lockedColDir = stepC;
+            const firstDr = selectedCells[1].row - selectedCells[0].row;
+            const firstDc = selectedCells[1].col - selectedCells[0].col;
+            const isPathDiagonal = firstDr !== 0 && firstDc !== 0;
+
+            if (isPathDiagonal) {
+                // Nếu đang vuốt đường chéo: phải đi thẳng 1 hướng chéo duy nhất, không được bẻ góc tạo zíc-zắc X
+                if (dr !== firstDr || dc !== firstDc) return;
+            } else {
+                // Nếu đang vuốt ngang/dọc: cho phép zíc-zắc vuông góc 90° (cả tiến và lùi), KHÔNG cho rẽ chéo
+                if (isNextDiagonal) return;
             }
-
-            if (lockedRowDir !== 0 && dr !== 0 && Math.sign(dr) !== lockedRowDir) return;
-            if (lockedColDir !== 0 && dc !== 0 && Math.sign(dc) !== lockedColDir) return;
-
-            // Không cho rẽ góc nhọn ngược (> 90°) so với bước liền trước
-            const prevDr = lastCell.row - selectedCells[selectedCells.length - 2].row;
-            const prevDc = lastCell.col - selectedCells[selectedCells.length - 2].col;
-            if (prevDr * dr + prevDc * dc < 0) return;
         }
 
         const nextList = [...selectedCells, cell];
@@ -778,7 +797,7 @@ export default function WordPuzzleGameView({
 
                     {/* Hướng dẫn nhỏ */}
                     <p className="mt-3 text-[11px] md:text-xs font-medium text-slate-400">
-                        Vuốt theo đường ngang, dọc, chéo hoặc zíc-zắc tiến để ghép đáp án
+                        Vuốt theo đường ngang, dọc, chéo hoặc zíc-zắc vuông góc để ghép đáp án
                     </p>
 
                     {/* Giải thích sau khi trả lời đúng */}
